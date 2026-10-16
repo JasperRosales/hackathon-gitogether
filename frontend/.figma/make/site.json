@@ -1,0 +1,11 @@
+{
+  "title": "Forma",
+  "description": "Enhance online shopping with AI-driven virtual fitting and personalized outfit recommendations, helping retailers boost sales and improve customer engagement.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
