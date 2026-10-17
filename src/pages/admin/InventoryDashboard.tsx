@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import type { MutableRefObject } from "react"
 import { createPortal } from "react-dom"
-import { Button, Input, Select, Heading } from "@/components/ui"
+import { Button, Input, Heading } from "@/components/ui"
 import { Icon, Garment } from "@/components/Icon"
 import PanelTitle from "@/components/PanelTitle"
 import ProductImage from "@/components/ProductImage"
@@ -9,8 +9,7 @@ import CatalogueDetails from "@/components/CatalogueDetails"
 import type { CatalogueApi } from "@/lib/useCatalogue"
 import type { Product } from "@/lib/catalogue"
 
-const CatalogueImport = lazy(() => import("@/components/CatalogueImport"))
-const CatalogueApi = lazy(() => import("@/components/CatalogueApi"))
+const BundleClassify = lazy(() => import("@/components/BundleClassify"))
 const InventoryEditor = lazy(() => import("@/components/InventoryEditor"))
 
 type Props = {
@@ -29,24 +28,23 @@ export default function InventoryDashboard({
   setQuery,
   busyRef,
 }: Props) {
-  const { catalogue, products, sync, refreshInterval, setRefreshInterval, abortRefresh } = api
-  const [importOpen, setImportOpen] = useState(false)
-  const [apiOpen, setApiOpen] = useState(false)
+  const { catalogue, products, sync, classifying } = api
+  const [bundleOpen, setBundleOpen] = useState(false)
   const [inventoryEditor, setInventoryEditor] = useState<Product | null | undefined>(undefined)
   const [details, setDetails] = useState<{
     sku: string
     mode: "variants" | "alternatives"
   } | null>(null)
   const [cataloguePage, setCataloguePage] = useState(1)
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const inventoryTrigger = useRef<HTMLButtonElement | null>(null)
   const addProductTrigger = useRef<HTMLButtonElement | null>(null)
-  const importTrigger = useRef<HTMLButtonElement | null>(null)
-  const apiTrigger = useRef<HTMLButtonElement | null>(null)
+  const bundleTrigger = useRef<HTMLButtonElement | null>(null)
   const detailsTrigger = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     busyRef.current = () =>
-      importOpen || apiOpen || inventoryEditor !== undefined || sync === "loading"
+      bundleOpen || inventoryEditor !== undefined || sync === "loading"
   })
   useEffect(() => setCataloguePage(1), [query, products])
 
@@ -65,39 +63,19 @@ export default function InventoryDashboard({
     else addProductTrigger.current?.focus()
   }
   const openInventoryEditor = (product: Product | null, trigger: HTMLButtonElement) => {
-    abortRefresh()
     inventoryTrigger.current = trigger
     if (!product) addProductTrigger.current = trigger
     setInventoryEditor(product)
-    setImportOpen(false)
-    setApiOpen(false)
+    setBundleOpen(false)
     setDetails(null)
   }
-  const closeApi = () => {
-    setApiOpen(false)
-    apiTrigger.current?.focus()
-  }
-  const closeImport = () => {
-    setImportOpen(false)
-    importTrigger.current?.focus()
+  const closeBundle = () => {
+    setBundleOpen(false)
+    bundleTrigger.current?.focus()
   }
   const closeDetails = () => {
     setDetails(null)
     detailsTrigger.current?.focus()
-  }
-  const importCatalogue = (incoming: Product[]) => {
-    if (!api.importCatalogue(incoming)) return false
-    closeImport()
-    return true
-  }
-  const connectCatalogue = (
-    incoming: Product[],
-    endpoint: string,
-    mode: "merge" | "replace",
-  ) => {
-    if (!api.connectCatalogue(incoming, endpoint, mode)) return false
-    closeApi()
-    return true
   }
   const saveInventoryProduct = (product: Product) => {
     if (!api.saveInventoryProduct(product)) return false
@@ -109,9 +87,13 @@ export default function InventoryDashboard({
     closeInventoryEditor()
     return true
   }
-  const refreshNow = async () => {
-    setDetails(null)
-    await api.refreshApi()
+  const removeProduct = (sku: string) => {
+    if (api.deleteInventoryProduct(sku)) setConfirmRemove(null)
+  }
+  const applyBundle = (incoming: Product[]) => {
+    if (!api.applyCatalogue(incoming, "AI")) return false
+    closeBundle()
+    return true
   }
   return (
     <>
@@ -121,28 +103,24 @@ export default function InventoryDashboard({
           <div>
             <span className="outfit-context-label">Source</span>
             <strong>{sourceLabel}</strong>
-            <p>Add products and manage available units by size below. For externally managed inventory, import a CSV or connect a public HTTPS API.</p>
-            {catalogue.endpoint && <span className="inventory-endpoint">{catalogue.endpoint}</span>}
+            <p>
+              Add products and manage available units by size below, then use
+              “Classify photos” to let AI detect categories, colours and prices
+              straight from product photos.
+            </p>
           </div>
-          <label>
-            Automatic inventory refresh
-            <Select value={catalogue.source === "API" ? refreshInterval : 0}
-              disabled={catalogue.source !== "API"}
-              onChange={(e) => {
-                abortRefresh()
-                setRefreshInterval(Number(e.target.value))
-              }}>
-              <option value={0}>Manual only</option>
-              <option value={30}>Every 30 seconds</option>
-              <option value={60}>Every minute</option>
-              <option value={300}>Every 5 minutes</option>
-            </Select>
-            <small>Runs only while this merchant tab is visible. CSV imports are snapshots; private APIs require a secure backend.</small>
-          </label>
         </div>
         <div className="panel-foot" role="status">
-          <span>{sync === "loading" ? "Updating inventory…" : sync === "error" ? "Update failed. Previous inventory retained." : catalogue.updatedAt ? `Last update: ${catalogue.updatedAt}` : "No catalogue yet"}</span>
-          <span>{catalogue.source === "API" && refreshInterval ? "Automatic refresh enabled" : "Manual updates"}</span>
+          <span>
+            {classifying
+              ? "AI is tagging products…"
+              : sync === "loading"
+                ? "Updating inventory…"
+                : catalogue.updatedAt
+                  ? `Last update: ${catalogue.updatedAt}`
+                  : "No catalogue yet"}
+          </span>
+          <span>Manual updates</span>
         </div>
       </section>
       <section className="panel catalogue-panel">
@@ -180,44 +158,17 @@ export default function InventoryDashboard({
             </Button>
             <Button
               className="button secondary"
-              disabled={sync === "loading"}
-              aria-expanded={importOpen}
-              onClick={(e) => {
-                importTrigger.current = e.currentTarget
-                setImportOpen(!importOpen)
-                setApiOpen(false)
+              aria-expanded={bundleOpen}
+              onClick={(event) => {
+                bundleTrigger.current = event.currentTarget
+                setBundleOpen(!bundleOpen)
                 setInventoryEditor(undefined)
                 setDetails(null)
               }}
             >
-              <Icon name="upload" />
-              Import CSV
+              <Icon name="sparkle" />
+              Classify photos
             </Button>
-            <Button
-              className="button secondary"
-              disabled={sync === "loading"}
-              aria-expanded={apiOpen}
-              onClick={(e) => {
-                apiTrigger.current = e.currentTarget
-                setApiOpen(!apiOpen)
-                setImportOpen(false)
-                setInventoryEditor(undefined)
-                setDetails(null)
-              }}
-            >
-              <Icon name="link" />
-              Connect API
-            </Button>
-            {catalogue.source === "API" && (
-              <Button
-                className="button secondary"
-                disabled={sync === "loading"}
-                onClick={() => void refreshNow()}
-              >
-                <Icon name="swap" />
-                {sync === "loading" ? "Refreshing…" : "Refresh API"}
-              </Button>
-            )}
           </div>
         </div>
         {inventoryEditor !== undefined && (
@@ -226,7 +177,7 @@ export default function InventoryDashboard({
               <div className="inventory-editor-modal" role="presentation" onMouseDown={closeInventoryEditor}>
                 <div className="inventory-editor-dialog" role="dialog" aria-modal="true" aria-label={inventoryEditor ? `Edit ${inventoryEditor.name}` : "Add product"} onMouseDown={(event) => event.stopPropagation()}>
                   <InventoryEditor key={inventoryEditor?.sku || "new-product"} product={inventoryEditor}
-                    products={products} apiConnected={catalogue.source === "API"} Icon={Icon}
+                    products={products} apiConnected={false} Icon={Icon}
                     onSave={saveInventoryProduct} onDelete={deleteInventoryProduct} onClose={closeInventoryEditor} />
                 </div>
               </div>
@@ -234,38 +185,20 @@ export default function InventoryDashboard({
             document.body,
           )
         )}
-        {importOpen && (
+        {bundleOpen && (
           <Suspense
             fallback={
               <div className="import-placeholder" role="status">
-                Loading import form…
+                Loading AI classifier…
               </div>
             }
           >
-            <CatalogueImport
+            <BundleClassify
               products={products}
               Icon={Icon}
               Garment={Garment}
-              onClose={closeImport}
-              onImport={importCatalogue}
-            />
-          </Suspense>
-        )}
-        {apiOpen && (
-          <Suspense
-            fallback={
-              <div className="import-placeholder" role="status">
-                Loading API connection form…
-              </div>
-            }
-          >
-            <CatalogueApi
-              products={products}
-              initialEndpoint={catalogue.endpoint}
-              Icon={Icon}
-              Garment={Garment}
-              onClose={closeApi}
-              onConnect={connectCatalogue}
+              onClose={closeBundle}
+              onApply={applyBundle}
             />
           </Suspense>
         )}
@@ -277,7 +210,7 @@ export default function InventoryDashboard({
                 <th scope="col">Category</th>
                 <th scope="col" className="numeric-cell">Price</th>
                 <th scope="col">Availability</th>
-                <th scope="col" className="action-cell" aria-label="Edit" />
+                <th scope="col" className="action-cell">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -319,13 +252,47 @@ export default function InventoryDashboard({
                     </span>
                   </td>
                   <td className="action-cell">
-                    <Button
-                      className="icon-button inventory-edit-action"
-                      aria-label={`Edit ${p.name}`}
-                      onClick={(event) => openInventoryEditor(p, event.currentTarget)}
-                    >
-                      <Icon name="edit" />
-                    </Button>
+                    <div className="row-actions">
+                      {confirmRemove === p.sku ? (
+                        <>
+                          <Button
+                            className="table-action table-action-primary"
+                            aria-label={`Confirm removing ${p.name}`}
+                            onClick={() => removeProduct(p.sku)}
+                          >
+                            <Icon name="trash" />
+                            Confirm
+                          </Button>
+                          <Button
+                            className="table-action"
+                            onClick={() => setConfirmRemove(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            className="table-action"
+                            aria-label={`Edit ${p.name}`}
+                            onClick={(event) =>
+                              openInventoryEditor(p, event.currentTarget)
+                            }
+                          >
+                            <Icon name="edit" />
+                            Edit
+                          </Button>
+                          <Button
+                            className="table-action"
+                            aria-label={`Remove ${p.name}`}
+                            onClick={() => setConfirmRemove(p.sku)}
+                          >
+                            <Icon name="trash" />
+                            Remove
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -337,7 +304,7 @@ export default function InventoryDashboard({
             <div className="empty">
               {products.length
                 ? `No products match “${query}”. Try a product name or SKU.`
-                : "Your inventory is empty. Add a product or import your stock."}
+                : "Your inventory is empty. Add a product or classify product photos to build it."}
             </div>
           )}
         </div>
@@ -381,14 +348,12 @@ export default function InventoryDashboard({
         <div className="panel-foot">
           <span>
             {catalogue.source !== "None"
-              ? catalogue.source === "API" && refreshInterval
-                ? "Local inventory snapshot · automatic refresh in this merchant tab"
-                : "Local catalogue snapshot · browser-tab storage · manual updates"
-              : "Import a CSV, connect an API or add a product to build your catalogue"}
+              ? "Local catalogue snapshot · browser-tab storage · manual updates"
+              : "Add a product or classify product photos to build your catalogue"}
           </span>
           {sync === "error" && (
             <span role="alert">
-              API unavailable. Existing data retained; retry refresh.
+              Update failed. Existing data retained.
             </span>
           )}
         </div>

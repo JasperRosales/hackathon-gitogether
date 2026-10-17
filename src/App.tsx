@@ -57,8 +57,8 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [query, setQuery] = useState("")
   const [period, setPeriod] = useState("Last 30 days")
-  // InventoryDashboard reports whether a modal or refresh blocks background
-  // API refreshes; the catalogue hook reads this ref on each tick.
+  // InventoryDashboard reports whether a modal is open; the catalogue hook
+  // reads this ref before running any background work.
   const busyRef = useRef<() => boolean>(() => false)
   const api = useCatalogue({
     notify,
@@ -69,11 +69,13 @@ export default function App() {
   const sourceLabel =
     catalogue.source === "None"
       ? "No catalogue yet"
-      : catalogue.source === "API"
-        ? "API connection"
-        : catalogue.source === "CSV"
-          ? "CSV import"
-          : "Manual inventory"
+      : catalogue.source === "AI"
+        ? "AI-classified photos"
+        : catalogue.source === "API"
+          ? "API connection"
+          : catalogue.source === "CSV"
+            ? "CSV import"
+            : "Manual inventory"
   const login = (account: Session) => {
     storeSession(account)
     setSession(account)
@@ -209,7 +211,7 @@ export default function App() {
               busyRef={busyRef}
             />
           )}
-          <Footer note="Products come from your imported catalogue (CSV, API or manual) in this browser tab; dashboard analytics use illustrative sample figures. Automatic API refresh runs only in the active merchant tab, not on a server. AI fitting and retailer checkout are not connected." />
+          <Footer note="Products come from manual entries or AI photo classification in this browser tab; dashboard analytics use illustrative sample figures. AI fitting and retailer checkout are not connected." />
         </main>
       </div>
       {toast && (

@@ -9,6 +9,10 @@ export type AiProviderConfig = {
 export const DEFAULT_GEMINI_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/openai"
 export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+// The AMD Cloud endpoint sends no CORS headers, so browser calls are routed
+// through the same-origin Vite proxy (see vite.config.ts) by default. Set
+// VITE_AMD_CLOUD_BASE_URL to an absolute URL only if that host allows CORS.
+export const DEFAULT_AMD_BASE_URL = "/amd-cloud/v1"
 
 function trim(value: string | undefined, fallback = ""): string {
   return (value || "").trim() || fallback
@@ -23,7 +27,7 @@ export function readVisionConfig(
 ): AiProviderConfig {
   return {
     apiKey: trim(env.VITE_AMD_CLOUD_API_KEY),
-    baseUrl: normalizeBaseUrl(env.VITE_AMD_CLOUD_BASE_URL, ""),
+    baseUrl: normalizeBaseUrl(env.VITE_AMD_CLOUD_BASE_URL, DEFAULT_AMD_BASE_URL),
     model: trim(env.VITE_AMD_CLOUD_VISION_MODEL),
   }
 }

@@ -28,9 +28,11 @@ export type ClassificationOutcome = {
   errors: string[]
 }
 
-const DEFAULT_MODEL = "gpt-oss-120b"
-const REQUEST_TIMEOUT_MS = 30000
-const BATCH_SIZE = 20
+const DEFAULT_MODEL = "DeepSeek-V4-Flash-Vision-Exp"
+const DEFAULT_BASE_URL = "/amd-cloud/v1"
+const TEXT_TIMEOUT_MS = 120000
+const IMAGE_TIMEOUT_MS = 120000
+const BATCH_SIZE = 10
 
 export function categoryList(): string {
   return classificationCategories.join(", ")
@@ -83,8 +85,12 @@ export function readClassificationConfig(
 ): ClassificationConfig {
   return {
     apiKey: (env.VITE_AMD_CLOUD_API_KEY || "").trim(),
-    baseUrl: (env.VITE_AMD_CLOUD_BASE_URL || "").trim().replace(/\/+$/, ""),
-    model: (env.VITE_AMD_CLOUD_MODEL || "").trim() || DEFAULT_MODEL,
+    baseUrl: (env.VITE_AMD_CLOUD_BASE_URL || DEFAULT_BASE_URL)
+      .trim()
+      .replace(/\/+$/, ""),
+    model:
+      (env.VITE_AMD_CLOUD_MODEL || env.VITE_AMD_CLOUD_VISION_MODEL || "").trim() ||
+      DEFAULT_MODEL,
   }
 }
 
@@ -174,7 +180,7 @@ async function callModel(
   const abort = () => controller.abort()
   if (signal?.aborted) controller.abort()
   signal?.addEventListener("abort", abort, { once: true })
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), TEXT_TIMEOUT_MS)
   try {
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
       method: "POST",
@@ -225,7 +231,7 @@ async function callModel(
       throw new Error(
         signal?.aborted
           ? "Classification cancelled."
-          : `AMD Cloud request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds.`,
+          : `AMD Cloud request timed out after ${TEXT_TIMEOUT_MS / 1000} seconds.`,
       )
     if (error instanceof TypeError)
       throw new Error(
@@ -297,4 +303,184 @@ export function applyClassifications(
     if (!outcome || outcome.category === product.category) return product
     return { ...product, category: outcome.category }
   })
+}
+
+export type ImageClassification = {
+  name: string
+  category: ClassificationCategory
+  color?: string
+  confidence?: number
+  reason?: string
+}
+
+export type ClassifiedImage = ImageClassification & { id: string }
+
+export type ImageClassificationOutcome = {
+  results: ClassifiedImage[]
+  errors: string[]
+}
+
+const IMAGE_CONCURRENCY = 2
+
+const imageSystemPrompt = `You are a fashion product identifier for a clothing catalogue.
+Look at the single garment or accessory in the photo.
+Return JSON only, in the shape {"name":"...","category":"...","color":"...","confidence":0.0,"reason":"..."}.
+"name" is a short catalogue title (2-6 words) in title case.
+"category" must be exactly one of: ${categoryList()}.
+"color" is the dominant colour. "confidence" is 0-1. "reason" is a short phrase.`
+
+function parseImageResult(content: string): ImageClassification | null {
+  const trimmed = content
+    .trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+  } catch {
+    return null
+  }
+  const record = Array.isArray(parsed)
+    ? (parsed[0] as unknown)
+    : parsed
+  if (!record || typeof record !== "object") return null
+  const fields = record as Record<string, unknown>
+  const category = normalizeCategory(fields.category)
+  const name =
+    typeof fields.name === "string" ? fields.name.trim().slice(0, 200) : ""
+  if (!category || !name) return null
+  return {
+    name,
+    category,
+    color:
+      typeof fields.color === "string"
+        ? fields.color.trim().slice(0, 80)
+        : undefined,
+    confidence:
+      typeof fields.confidence === "number" &&
+      fields.confidence >= 0 &&
+      fields.confidence <= 1
+        ? fields.confidence
+        : undefined,
+    reason: typeof fields.reason === "string" ? fields.reason : undefined,
+  }
+}
+
+async function callModelForImage(
+  config: ClassificationConfig,
+  dataUrl: string,
+  signal?: AbortSignal,
+): Promise<ImageClassification> {
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  if (signal?.aborted) controller.abort()
+  signal?.addEventListener("abort", abort, { once: true })
+  const timeout = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS)
+  try {
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: imageSystemPrompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Identify the garment in this photo." },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    })
+    const payload = (await response
+      .json()
+      .catch(() => null)) as ChatCompletionResponse | null
+    if (!response.ok)
+      throw new Error(
+        payload?.error?.message ||
+          `AMD Cloud returned HTTP ${response.status}.`,
+      )
+    const content = payload?.choices?.[0]?.message?.content
+    if (!content) throw new Error("AMD Cloud returned an empty completion.")
+    const result = parseImageResult(content)
+    if (!result) throw new Error("AMD Cloud could not identify this image.")
+    return result
+  } catch (error) {
+    if (controller.signal.aborted)
+      throw new Error(
+        signal?.aborted
+          ? "Classification cancelled."
+          : `AMD Cloud request timed out after ${IMAGE_TIMEOUT_MS / 1000} seconds.`,
+      )
+    if (error instanceof TypeError)
+      throw new Error(
+        "Cannot reach AMD Cloud. Check the endpoint and that the proxy is running.",
+      )
+    throw error
+  } finally {
+    clearTimeout(timeout)
+    signal?.removeEventListener("abort", abort)
+  }
+}
+
+export async function classifyImage(
+  dataUrl: string,
+  options: { config?: ClassificationConfig; signal?: AbortSignal } = {},
+): Promise<ImageClassification> {
+  const config = options.config ?? readClassificationConfig()
+  assertConfig(config)
+  return callModelForImage(config, dataUrl, options.signal)
+}
+
+export async function classifyImages(
+  images: { id: string; dataUrl: string }[],
+  options: {
+    config?: ClassificationConfig
+    signal?: AbortSignal
+    onProgress?: (processed: number, total: number) => void
+  } = {},
+): Promise<ImageClassificationOutcome> {
+  const config = options.config ?? readClassificationConfig()
+  assertConfig(config)
+  const results: ClassifiedImage[] = []
+  const errors: string[] = []
+  let processed = 0
+  let cursor = 0
+  const worker = async () => {
+    while (cursor < images.length) {
+      if (options.signal?.aborted) return
+      const image = images[cursor++]
+      try {
+        const result = await callModelForImage(
+          config,
+          image.dataUrl,
+          options.signal,
+        )
+        results.push({ id: image.id, ...result })
+      } catch (error) {
+        if (options.signal?.aborted) return
+        errors.push(
+          error instanceof Error ? error.message : "Classification failed.",
+        )
+      }
+      processed += 1
+      options.onProgress?.(processed, images.length)
+    }
+  }
+  await Promise.all(
+    Array.from(
+      { length: Math.max(1, Math.min(IMAGE_CONCURRENCY, images.length)) },
+      worker,
+    ),
+  )
+  return { results, errors }
 }

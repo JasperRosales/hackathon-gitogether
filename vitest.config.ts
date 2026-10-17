@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    // Live smoke tests hit real AI endpoints; run them explicitly when needed.
+    exclude: ["**/*.live.test.ts"],
   },
 })

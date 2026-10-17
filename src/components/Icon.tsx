@@ -18,6 +18,7 @@ export function Icon({ name }: { name: string }) {
     plus: "M12 5v14 M5 12h14",
     sidebar: "M3 4h18v16H3z M9 4v16 M5.5 8h1 M5.5 12h1",
     link: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
+    sparkle: "M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9Z",
   }
   return (
     <svg
