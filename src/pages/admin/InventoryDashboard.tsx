@@ -36,6 +36,7 @@ export default function InventoryDashboard({
     mode: "variants" | "alternatives"
   } | null>(null)
   const [cataloguePage, setCataloguePage] = useState(1)
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const inventoryTrigger = useRef<HTMLButtonElement | null>(null)
   const addProductTrigger = useRef<HTMLButtonElement | null>(null)
   const bundleTrigger = useRef<HTMLButtonElement | null>(null)
@@ -85,6 +86,9 @@ export default function InventoryDashboard({
     if (!api.deleteInventoryProduct(sku)) return false
     closeInventoryEditor()
     return true
+  }
+  const removeProduct = (sku: string) => {
+    if (api.deleteInventoryProduct(sku)) setConfirmRemove(null)
   }
   const applyBundle = (incoming: Product[]) => {
     if (!api.applyCatalogue(incoming, "AI")) return false
@@ -182,24 +186,21 @@ export default function InventoryDashboard({
           )
         )}
         {bundleOpen && (
-          createPortal(
-            <Suspense
-              fallback={
-                <div className="import-placeholder" role="status">
-                  Loading AI classifier…
-                </div>
-              }
-            >
-              <BundleClassify
-                products={products}
-                Icon={Icon}
-                Garment={Garment}
-                onClose={closeBundle}
-                onApply={applyBundle}
-              />
-            </Suspense>,
-            document.body,
-          )
+          <Suspense
+            fallback={
+              <div className="import-placeholder" role="status">
+                Loading AI classifier…
+              </div>
+            }
+          >
+            <BundleClassify
+              products={products}
+              Icon={Icon}
+              Garment={Garment}
+              onClose={closeBundle}
+              onApply={applyBundle}
+            />
+          </Suspense>
         )}
         <div className="table-wrap">
           <table className="catalogue-table" aria-label="Product catalogue">
@@ -209,6 +210,7 @@ export default function InventoryDashboard({
                 <th scope="col">Category</th>
                 <th scope="col" className="numeric-cell">Price</th>
                 <th scope="col">Availability</th>
+                <th scope="col" className="action-cell">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -248,6 +250,49 @@ export default function InventoryDashboard({
                           ? `${p.stock} left`
                           : `${p.stock} available`}
                     </span>
+                  </td>
+                  <td className="action-cell">
+                    <div className="row-actions">
+                      {confirmRemove === p.sku ? (
+                        <>
+                          <Button
+                            className="table-action table-action-primary"
+                            aria-label={`Confirm removing ${p.name}`}
+                            onClick={() => removeProduct(p.sku)}
+                          >
+                            <Icon name="trash" />
+                            Confirm
+                          </Button>
+                          <Button
+                            className="table-action"
+                            onClick={() => setConfirmRemove(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            className="table-action"
+                            aria-label={`Edit ${p.name}`}
+                            onClick={(event) =>
+                              openInventoryEditor(p, event.currentTarget)
+                            }
+                          >
+                            <Icon name="edit" />
+                            Edit
+                          </Button>
+                          <Button
+                            className="table-action"
+                            aria-label={`Remove ${p.name}`}
+                            onClick={() => setConfirmRemove(p.sku)}
+                          >
+                            <Icon name="trash" />
+                            Remove
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

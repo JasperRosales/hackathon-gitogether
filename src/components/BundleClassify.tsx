@@ -102,6 +102,9 @@ export default function BundleClassify({
   })
   const [notices, setNotices] = useState<string[]>([])
   const [errors, setErrors] = useState<string[]>([])
+  const [editing, setEditing] = useState<{ id: string; draft: BundleItem } | null>(
+    null,
+  )
   const configured = isClassificationConfigured()
 
   useEffect(() => {
@@ -229,8 +232,30 @@ export default function BundleClassify({
     void classify([item])
   }
 
-  const removeItem = (id: string) =>
+  const removeItem = (id: string) => {
     setItems((current) => current.filter((item) => item.id !== id))
+    setEditing((current) => (current?.id === id ? null : current))
+  }
+
+  const startEdit = (item: BundleItem) =>
+    setEditing({ id: item.id, draft: { ...item } })
+  const cancelEdit = () => setEditing(null)
+  const editDraft = (changes: Partial<BundleItem>) =>
+    setEditing((current) =>
+      current ? { ...current, draft: { ...current.draft, ...changes } } : current,
+    )
+  const saveEdit = () => {
+    if (!editing) return
+    const { draft } = editing
+    patch(draft.id, {
+      name: draft.name,
+      category: draft.category,
+      color: draft.color,
+      price: draft.price,
+      stock: draft.stock,
+    })
+    setEditing(null)
+  }
 
   const buildProduct = (item: BundleItem): Product | null => {
     const name = item.name.trim()
@@ -277,6 +302,7 @@ export default function BundleClassify({
         applied.has(item.id) ? { ...item, status: "applied" } : item,
       ),
     )
+    setEditing((current) => (current && applied.has(current.id) ? null : current))
   }
 
   const ready = items.filter((item) => item.status === "ready")
@@ -391,126 +417,194 @@ export default function BundleClassify({
               <Icon name="check" />
             </Button>
           </div>
-          <div className="bundle-list">
-            {items.map((item) => (
-              <article className="bundle-item" key={item.id}>
-                <div className="bundle-item-thumb">
-                  {item.dataUrl ? (
-                    <img src={item.dataUrl} alt={item.name} />
-                  ) : (
-                    <Garment type={item.category} />
-                  )}
-                </div>
-                <div className="bundle-item-body">
-                  <div className="bundle-item-fields">
-                    <label>
-                      Name
-                      <Input
-                        value={item.name}
-                        maxLength={200}
-                        disabled={item.status === "applied"}
-                        onChange={(e) => patch(item.id, { name: e.target.value })}
-                      />
-                    </label>
-                    <label>
-                      Category
-                      <Select
-                        value={item.category}
-                        disabled={item.status === "applied"}
-                        onChange={(e) =>
-                          patch(item.id, {
-                            category: e.target.value as ClassificationCategory,
-                          })
-                        }
-                      >
-                        {classificationCategories.map((value) => (
-                          <option key={value}>{value}</option>
-                        ))}
-                      </Select>
-                    </label>
-                    <label>
-                      Color
-                      <Input
-                        value={item.color}
-                        maxLength={80}
-                        disabled={item.status === "applied"}
-                        onChange={(e) => patch(item.id, { color: e.target.value })}
-                      />
-                    </label>
-                    <label>
-                      Price (₱)
-                      <Input
-                        type="number"
-                        min="0"
-                        max="1000000"
-                        step=".01"
-                        value={item.price}
-                        disabled={item.status === "applied"}
-                        onChange={(e) => patch(item.id, { price: e.target.value })}
-                      />
-                    </label>
-                    <label>
-                      Units (size M)
-                      <Input
-                        type="number"
-                        min="0"
-                        max="1000000"
-                        step="1"
-                        value={item.stock}
-                        disabled={item.status === "applied"}
-                        onChange={(e) => patch(item.id, { stock: e.target.value })}
-                      />
-                    </label>
-                  </div>
-                  <div className="bundle-item-foot">
-                    <span className={`bundle-status ${item.status}`}>
-                      {item.status === "classifying"
-                        ? "Classifying…"
-                        : item.status === "ready"
-                          ? item.confidence !== undefined
-                            ? `AI ready · ${Math.round(item.confidence * 100)}%`
-                            : "AI ready"
-                          : item.status === "applied"
-                            ? `Saved · ${item.sku}`
-                            : item.status === "error"
-                              ? item.error || "Could not classify"
-                              : "Queued"}
-                    </span>
-                    <span className="bundle-file">{item.fileName}</span>
-                    {item.status === "error" && (
-                      <Button
-                        className="text-button"
-                        disabled={busy}
-                        onClick={() => retry(item)}
-                      >
-                        <Icon name="swap" />
-                        Retry
-                      </Button>
-                    )}
-                    {item.status !== "applied" && (
-                      <Button
-                        className="button secondary"
-                        disabled={busy || item.status === "classifying"}
-                        onClick={() => applyItems([item])}
-                      >
-                        Apply
-                        <Icon name="check" />
-                      </Button>
-                    )}
-                    {item.status !== "applied" && (
-                      <Button
-                        className="text-button"
-                        aria-label={`Remove ${item.name || item.fileName} from the bundle`}
-                        onClick={() => removeItem(item.id)}
-                      >
-                        <Icon name="trash" />
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
+          <div className="table-wrap bundle-table-wrap">
+            <table className="catalogue-table bundle-table" aria-label="Photos to classify">
+              <thead>
+                <tr>
+                  <th scope="col">Photo</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Colour</th>
+                  <th scope="col" className="numeric-cell">Price</th>
+                  <th scope="col" className="numeric-cell">Units</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="action-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const isEditing = editing?.id === item.id
+                  const draft = isEditing && editing ? editing.draft : item
+                  const isApplied = item.status === "applied"
+                  return (
+                    <tr key={item.id} className={isEditing ? "bundle-row-editing" : undefined}>
+                      <td>
+                        <div className="bundle-thumb">
+                          {item.dataUrl ? (
+                            <img src={item.dataUrl} alt={item.name} />
+                          ) : (
+                            <Garment type={item.category} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="bundle-name-cell">
+                        {isEditing ? (
+                          <Input
+                            value={draft.name}
+                            maxLength={200}
+                            aria-label="Product name"
+                            onChange={(e) => editDraft({ name: e.target.value })}
+                          />
+                        ) : (
+                          <>
+                            <strong>{item.name || "Untitled"}</strong>
+                            <small>{item.fileName}</small>
+                          </>
+                        )}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <Select
+                            value={draft.category}
+                            aria-label="Category"
+                            onChange={(e) =>
+                              editDraft({
+                                category: e.target.value as ClassificationCategory,
+                              })
+                            }
+                          >
+                            {classificationCategories.map((value) => (
+                              <option key={value}>{value}</option>
+                            ))}
+                          </Select>
+                        ) : (
+                          <span className="table-category">{item.category}</span>
+                        )}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <Input
+                            value={draft.color}
+                            maxLength={80}
+                            aria-label="Colour"
+                            onChange={(e) => editDraft({ color: e.target.value })}
+                          />
+                        ) : (
+                          <span className="table-category">{item.color || "—"}</span>
+                        )}
+                      </td>
+                      <td className="numeric-cell">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min="0"
+                            max="1000000"
+                            step=".01"
+                            value={draft.price}
+                            aria-label="Price"
+                            onChange={(e) => editDraft({ price: e.target.value })}
+                          />
+                        ) : (
+                          `₱${(Number(item.price) || 0).toFixed(2)}`
+                        )}
+                      </td>
+                      <td className="numeric-cell">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min="0"
+                            max="1000000"
+                            step="1"
+                            value={draft.stock}
+                            aria-label="Units at size M"
+                            onChange={(e) => editDraft({ stock: e.target.value })}
+                          />
+                        ) : (
+                          item.stock
+                        )}
+                      </td>
+                      <td>
+                        <span className={`bundle-status ${item.status}`}>
+                          {item.status === "classifying"
+                            ? "Classifying…"
+                            : item.status === "ready"
+                              ? item.confidence !== undefined
+                                ? `AI ready · ${Math.round(item.confidence * 100)}%`
+                                : "AI ready"
+                              : item.status === "applied"
+                                ? `Saved · ${item.sku}`
+                                : item.status === "error"
+                                  ? item.error || "Could not classify"
+                                  : "Queued"}
+                        </span>
+                      </td>
+                      <td className="action-cell">
+                        <div className="bundle-actions">
+                          {isEditing ? (
+                            <>
+                              <Button
+                                className="table-action table-action-primary"
+                                onClick={saveEdit}
+                              >
+                                <Icon name="check" />
+                                Save
+                              </Button>
+                              <Button className="table-action" onClick={cancelEdit}>
+                                <Icon name="close" />
+                                Cancel
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              {item.status === "error" && (
+                                <Button
+                                  className="table-action"
+                                  disabled={busy}
+                                  onClick={() => retry(item)}
+                                >
+                                  <Icon name="swap" />
+                                  Retry
+                                </Button>
+                              )}
+                              {item.status === "ready" && (
+                                <Button
+                                  className="table-action table-action-primary"
+                                  disabled={busy}
+                                  onClick={() => applyItems([item])}
+                                >
+                                  <Icon name="check" />
+                                  Apply
+                                </Button>
+                              )}
+                              {!isApplied && (
+                                <>
+                                  <Button
+                                    className="table-action"
+                                    disabled={busy || item.status === "classifying"}
+                                    onClick={() => startEdit(item)}
+                                  >
+                                    <Icon name="edit" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    className="table-action"
+                                    aria-label={`Remove ${item.name || item.fileName} from the bundle`}
+                                    onClick={() => removeItem(item.id)}
+                                  >
+                                    <Icon name="trash" />
+                                    Remove
+                                  </Button>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </>
       )}
