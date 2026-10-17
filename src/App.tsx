@@ -14,14 +14,16 @@ import {
   readCatalogue,
   productSizes,
   variantStock,
-  fetchApiCatalogue,
   mergeCatalogue,
-  safeApiEndpoint,
 } from "./lib/catalogue"
 import type { Product, Catalogue } from "./lib/catalogue"
-const CatalogueImport = lazy(() => import("./components/CatalogueImport"))
-const CatalogueApi = lazy(() => import("./components/CatalogueApi"))
+import {
+  applyClassifications,
+  classifyProducts,
+  isClassificationConfigured,
+} from "./lib/classification"
 const InventoryEditor = lazy(() => import("./components/InventoryEditor"))
+const BundleClassify = lazy(() => import("./components/BundleClassify"))
 
 type Session = {
   name: string
@@ -51,6 +53,20 @@ function initials(name: string) {
     .map((part) => part[0])
     .join("")
     .toUpperCase()
+}
+const classifiedKey = "forma-ai-classified-v1"
+function productFingerprint(product: Product) {
+  return `${product.name}|${product.price}|${product.color || ""}`
+}
+function readClassifiedMap(): Record<string, string> {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(classifiedKey) || "null")
+    if (value && typeof value === "object" && !Array.isArray(value))
+      return value as Record<string, string>
+  } catch {
+    /* An unreadable map only means products are classified again. */
+  }
+  return {}
 }
 
 const sampleProducts: Product[] = [
@@ -132,6 +148,7 @@ function Icon({ name }: { name: string }) {
     plus: "M12 5v14 M5 12h14",
     sidebar: "M3 4h18v16H3z M9 4v16 M5.5 8h1 M5.5 12h1",
     link: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2 M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
+    ai: "M12 3v4 M12 17v4 M3 12h4 M17 12h4 M6.3 6.3l2.8 2.8 M14.9 14.9l2.8 2.8 M17.7 6.3l-2.8 2.8 M9.1 14.9l-2.8 2.8",
   }
   return (
     <svg
@@ -177,7 +194,7 @@ export default function App() {
     dispatch(setCatalogueAction(catalogue))
   }, [catalogue, dispatch])
   const products = catalogue.products
-  const catalogueSourceLabel = catalogue.source === "API" ? "API connection" : catalogue.source === "CSV" ? "CSV import" : catalogue.source === "Manual" ? "Manual inventory" : "Built-in catalogue"
+  const catalogueSourceLabel = catalogue.source === "Manual" ? "Manual inventory" : catalogue.source === "AI" ? "AI-classified photos" : "Built-in catalogue"
   const unavailableProducts = products.filter((p) => p.stock === 0)
   const firstException = unavailableProducts[0]
   const variantStatuses = products.flatMap((p) =>
@@ -186,8 +203,7 @@ export default function App() {
   const availability = variantStatuses.length
     ? `${((variantStatuses.filter(Boolean).length / variantStatuses.length) * 100).toFixed(1)}%`
     : "—"
-  const [importOpen, setImportOpen] = useState(false)
-  const [apiOpen, setApiOpen] = useState(false)
+  const [bundleOpen, setBundleOpen] = useState(false)
   const [inventoryEditor, setInventoryEditor] = useState<Product | null | undefined>(undefined)
   const inventoryTrigger = useRef<HTMLButtonElement | null>(null)
   const addProductTrigger = useRef<HTMLButtonElement | null>(null)
@@ -197,31 +213,19 @@ export default function App() {
     else addProductTrigger.current?.focus()
   }
   const openInventoryEditor = (product: Product | null, trigger: HTMLButtonElement) => {
-    refreshSequence.current++
-    refreshRequest.current?.abort()
-    setSync("idle")
     inventoryTrigger.current = trigger
     if (!product) addProductTrigger.current = trigger
     setInventoryEditor(product)
-    setImportOpen(false)
-    setApiOpen(false)
+    setBundleOpen(false)
     setDetails(null)
   }
-  const importTrigger = useRef<HTMLButtonElement | null>(null)
-  const apiTrigger = useRef<HTMLButtonElement | null>(null)
-  const refreshRequest = useRef<AbortController | null>(null)
-  const refreshSequence = useRef(0)
-  const closeApi = () => {
-    setApiOpen(false)
-    apiTrigger.current?.focus()
-  }
-  const closeImport = () => {
-    setImportOpen(false)
-    importTrigger.current?.focus()
+  const bundleTrigger = useRef<HTMLButtonElement | null>(null)
+  const closeBundle = () => {
+    setBundleOpen(false)
+    bundleTrigger.current?.focus()
   }
   const [page, setPage] = useState("Home")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [refreshInterval, setRefreshInterval] = useState(0)
   const [session, setSession] = useState<Session | null>(readSession)
   useEffect(() => {
     if (session) dispatch(setSessionAction(session))
@@ -235,17 +239,8 @@ export default function App() {
   const detailsTrigger = useRef<HTMLButtonElement | null>(null)
   useEffect(() => {
     setDetails(null)
-    setImportOpen(false)
-    setApiOpen(false)
     setInventoryEditor(undefined)
   }, [page, route])
-  useEffect(() => {
-    setSync("idle")
-    return () => {
-      refreshSequence.current++
-      refreshRequest.current?.abort()
-    }
-  }, [route])
   const closeDetails = () => {
     setDetails(null)
     detailsTrigger.current?.focus()
@@ -304,7 +299,6 @@ export default function App() {
   const catalogueRows = filteredProducts.slice((cataloguePage - 1) * 12, cataloguePage * 12)
   useEffect(() => setCataloguePage(1), [query, products, page])
   const [period, setPeriod] = useState("Last 30 days")
-  const [sync, setSync] = useState("idle")
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => clearTimeout(timer.current), [])
   const notify = (text: string) => {
@@ -312,46 +306,153 @@ export default function App() {
     setToast(text)
     timer.current = setTimeout(() => setToast(""), 4000)
   }
-  const applyCatalogue = (
-    incoming: Product[],
-    source: "CSV" | "API" | "Manual",
-    endpoint?: string,
-    apiMode?: "merge" | "replace",
-    background = false,
-  ) => {
-    const publicEndpoint =
-      source === "API" ? safeApiEndpoint(endpoint || "") : undefined
-    if (source === "API" && !publicEndpoint) return false
+  const catalogueRef = useRef(catalogue)
+  const classifyRequest = useRef<AbortController | null>(null)
+  const classifyRunning = useRef(false)
+  const classifyQueue = useRef<Product[]>([])
+  const failedSkus = useRef<Set<string>>(new Set())
+  const classifiedMap = useRef<Record<string, string>>({})
+  const keyNoticeShown = useRef(false)
+  const [classifying, setClassifying] = useState(false)
+  useEffect(() => {
+    classifiedMap.current = readClassifiedMap()
+  }, [])
+  useEffect(() => {
+    catalogueRef.current = catalogue
+  }, [catalogue])
+  const commitClassified = (nextProducts: Product[]) => {
     const next: Catalogue = {
-      products: incoming,
-      source,
+      ...catalogueRef.current,
+      products: nextProducts,
       updatedAt: new Date().toLocaleString(),
-      ...(source === "API" ? { endpoint: publicEndpoint!, apiMode } : {}),
     }
     try {
       sessionStorage.setItem(catalogueKey, JSON.stringify(next))
     } catch {
       return false
     }
-    refreshSequence.current++
-    refreshRequest.current?.abort()
+    catalogueRef.current = next
     setCatalogue(next)
-    if (!background) {
-      if (source !== "API" || endpoint !== catalogue.endpoint) setRefreshInterval(0)
-      setPage("Configuration")
-      setQuery("")
-      setDetails(null)
-      closeImport()
-      closeApi()
+    return true
+  }
+  const autoClassify = async (targets: Product[]) => {
+    if (!isClassificationConfigured()) {
+      if (targets.length && !keyNoticeShown.current) {
+        keyNoticeShown.current = true
+        notify("Set VITE_AMD_CLOUD_API_KEY to enable AI auto-tagging.")
+      }
+      return
     }
-    setSync("idle")
-    if (!background) notify(
+    const known = classifiedMap.current
+    const unique = new Map<string, Product>()
+    for (const product of targets) unique.set(product.sku, product)
+    const fresh = Array.from(unique.values()).filter(
+      (product) =>
+        product.origin !== "AI" &&
+        known[product.sku] !== productFingerprint(product) &&
+        !failedSkus.current.has(product.sku),
+    )
+    if (!fresh.length) return
+    classifyQueue.current.push(...fresh)
+    if (classifyRunning.current) return
+    classifyRunning.current = true
+    setClassifying(true)
+    const controller = new AbortController()
+    classifyRequest.current = controller
+    try {
+      while (classifyQueue.current.length && !controller.signal.aborted) {
+        const queued = classifyQueue.current
+        classifyQueue.current = []
+        const pending = queued.filter(
+          (product) =>
+            product.origin !== "AI" &&
+            known[product.sku] !== productFingerprint(product) &&
+            !failedSkus.current.has(product.sku),
+        )
+        if (!pending.length) continue
+        try {
+          const outcome = await classifyProducts(pending, {
+            signal: controller.signal,
+          })
+          if (controller.signal.aborted) break
+          const bySku = new Map(
+            pending.map((product) => [product.sku, product]),
+          )
+          if (outcome.results.length) {
+            for (const result of outcome.results) {
+              const product = bySku.get(result.sku)
+              if (product) known[result.sku] = productFingerprint(product)
+            }
+            try {
+              sessionStorage.setItem(classifiedKey, JSON.stringify(known))
+            } catch {
+              /* Fingerprinting stays in memory when storage is blocked. */
+            }
+            const latest = catalogueRef.current
+            const updated = applyClassifications(
+              latest.products,
+              outcome.results,
+            )
+            const retagged = outcome.results.filter(
+              (result) => bySku.get(result.sku)?.category !== result.category,
+            ).length
+            if (commitClassified(updated))
+              notify(
+                retagged
+                  ? `AI tagged ${outcome.results.length} products and corrected ${retagged} categories.`
+                  : `AI confirmed the categories of ${outcome.results.length} products.`,
+              )
+          }
+          if (outcome.errors.length) {
+            for (const product of pending) failedSkus.current.add(product.sku)
+            notify(`AI tagging stopped: ${outcome.errors[0]}`)
+          }
+        } catch (error) {
+          if (controller.signal.aborted) break
+          for (const product of pending) failedSkus.current.add(product.sku)
+          notify(
+            error instanceof Error
+              ? `AI tagging failed: ${error.message}`
+              : "AI tagging failed.",
+          )
+        }
+      }
+    } finally {
+      classifyRunning.current = false
+      classifyRequest.current = null
+      setClassifying(false)
+    }
+  }
+  useEffect(() => () => classifyRequest.current?.abort(), [])
+  useEffect(() => {
+    if (catalogueRef.current.source !== "Sample")
+      void autoClassify(catalogueRef.current.products)
+    // Tag products imported in an earlier session that are still untagged.
+  }, [])
+  const applyCatalogue = (incoming: Product[], source: "Manual" | "AI") => {
+    const next: Catalogue = {
+      products: incoming,
+      source,
+      updatedAt: new Date().toLocaleString(),
+    }
+    try {
+      sessionStorage.setItem(catalogueKey, JSON.stringify(next))
+    } catch {
+      return false
+    }
+    setCatalogue(next)
+    catalogueRef.current = next
+    void autoClassify(incoming)
+    setPage("Configuration")
+    setQuery("")
+    setDetails(null)
+    if (source !== "AI") notify(
       `${incoming.length} products available in this browser catalogue. No retailer API was changed.`,
     )
     return true
   }
-  const importCatalogue = (incoming: Product[]) =>
-    applyCatalogue(incoming, "CSV")
+  const applyBundle = (incoming: Product[]) =>
+    applyCatalogue(mergeCatalogue(products, incoming, "merge"), "AI")
   const saveInventoryProduct = (product: Product) => {
     const exists = products.some((p) => p.sku === product.sku)
     const next = exists ? products.map((p) => p.sku === product.sku ? product : p) : [...products, product]
@@ -366,78 +467,6 @@ export default function App() {
     notify("Product removed from your local inventory.")
     return true
   }
-  const connectCatalogue = (
-    incoming: Product[],
-    endpoint: string,
-    mode: "merge" | "replace",
-  ) =>
-    applyCatalogue(
-      mergeCatalogue(products, incoming, mode),
-      "API",
-      endpoint,
-      mode,
-    )
-  const refreshApi = async (background = false) => {
-    if (!catalogue.endpoint) return
-    if (background && (importOpen || apiOpen || inventoryEditor !== undefined || sync === "loading")) return
-    if (!background) {
-      setImportOpen(false)
-      setApiOpen(false)
-      setDetails(null)
-    }
-    refreshRequest.current?.abort()
-    const controller = new AbortController()
-    refreshRequest.current = controller
-    const sequence = ++refreshSequence.current
-    setSync("loading")
-    try {
-      const result = await fetchApiCatalogue(
-        catalogue.endpoint,
-        controller.signal,
-      )
-      if (sequence !== refreshSequence.current || controller.signal.aborted)
-        return
-      if (result.errors.length) throw new Error(result.errors[0])
-      if (
-        !applyCatalogue(
-          mergeCatalogue(products, result.products, catalogue.apiMode || "merge"),
-          "API",
-          catalogue.endpoint,
-          catalogue.apiMode || "merge",
-          background,
-        )
-      )
-        throw new Error(
-          "Browser storage is unavailable or full. Existing catalogue was retained.",
-        )
-    } catch (error) {
-      if (sequence === refreshSequence.current && !controller.signal.aborted) {
-        setSync("error")
-        if (!background) notify(
-          error instanceof Error
-            ? error.message
-            : "API refresh failed. Existing catalogue was retained.",
-        )
-      }
-    }
-  }
-  const backgroundRefresh = useRef(refreshApi)
-  backgroundRefresh.current = refreshApi
-  useEffect(() => {
-    if (!refreshInterval || catalogue.source !== "API" || !catalogue.endpoint ||
-      route !== "#/merchant" || session?.role !== "merchant") return
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout>
-    const schedule = () => {
-      timer = setTimeout(async () => {
-        if (cancelled) return
-        if (document.visibilityState === "visible") await backgroundRefresh.current(true)
-        if (!cancelled) schedule()
-      }, refreshInterval * 1000)
-    }
-    schedule()
-    return () => { cancelled = true; clearTimeout(timer) }
-  }, [refreshInterval, catalogue.source, catalogue.endpoint, route, session?.role])
   if (route === "#/login" || needsMerchantLogin)
     return <LoginPage onLogin={login} />
   if (studio)
@@ -900,30 +929,12 @@ export default function App() {
                   <div>
                     <span className="outfit-context-label">Source</span>
                     <strong>{catalogueSourceLabel}</strong>
-                    <p>Add products and manage available units by size below. For externally managed inventory, import a CSV or connect a public HTTPS API.</p>
-                    {catalogue.endpoint && <span className="inventory-endpoint">{catalogue.endpoint}</span>}
+                    <p>Upload clothing photos to classify them with AI, then apply the results to your catalogue. You can also add products manually below.</p>
                   </div>
-                  <label>
-                    Automatic inventory refresh
-                    <Select value={catalogue.source === "API" ? refreshInterval : 0}
-                      disabled={catalogue.source !== "API"}
-                      onChange={(e) => {
-                        refreshSequence.current++
-                        refreshRequest.current?.abort()
-                        setSync("idle")
-                        setRefreshInterval(Number(e.target.value))
-                      }}>
-                      <option value={0}>Manual only</option>
-                      <option value={30}>Every 30 seconds</option>
-                      <option value={60}>Every minute</option>
-                      <option value={300}>Every 5 minutes</option>
-                    </Select>
-                    <small>Runs only while this merchant tab is visible. CSV imports are snapshots; private APIs require a secure backend.</small>
-                  </label>
                 </div>
                 <div className="panel-foot" role="status">
-                  <span>{sync === "loading" ? "Updating inventory…" : sync === "error" ? "Update failed. Previous inventory retained." : `Last update: ${catalogue.updatedAt}`}</span>
-                  <span>{catalogue.source === "API" && refreshInterval ? "Automatic refresh enabled" : "Manual updates"}</span>
+                  <span>{classifying ? "AI auto-tagging products…" : `Last update: ${catalogue.updatedAt}`}</span>
+                  <span>{classifying ? "Classifying with AMD Cloud" : "Manual updates"}</span>
                 </div>
               </section>
             )}
@@ -963,44 +974,17 @@ export default function App() {
                     </Button>
                     <Button
                       className="button secondary"
-                      disabled={sync === "loading"}
-                      aria-expanded={importOpen}
+                      aria-expanded={bundleOpen}
                       onClick={(e) => {
-                        importTrigger.current = e.currentTarget
-                        setImportOpen(!importOpen)
-                        setApiOpen(false)
+                        bundleTrigger.current = e.currentTarget
+                        setBundleOpen(!bundleOpen)
                         setInventoryEditor(undefined)
                         setDetails(null)
                       }}
                     >
-                      <Icon name="upload" />
-                      Import CSV
+                      <Icon name="ai" />
+                      Classify photos
                     </Button>
-                    <Button
-                      className="button secondary"
-                      disabled={sync === "loading"}
-                      aria-expanded={apiOpen}
-                      onClick={(e) => {
-                        apiTrigger.current = e.currentTarget
-                        setApiOpen(!apiOpen)
-                        setImportOpen(false)
-                        setInventoryEditor(undefined)
-                        setDetails(null)
-                      }}
-                    >
-                      <Icon name="link" />
-                      Connect API
-                    </Button>
-                    {catalogue.source === "API" && (
-                      <Button
-                        className="button secondary"
-                        disabled={sync === "loading"}
-                        onClick={() => void refreshApi()}
-                      >
-                        <Icon name="swap" />
-                        {sync === "loading" ? "Refreshing…" : "Refresh API"}
-                      </Button>
-                    )}
                   </div>
                 </div>
                 {inventoryEditor !== undefined && (
@@ -1017,38 +1001,20 @@ export default function App() {
                     document.body,
                   )
                 )}
-                {importOpen && (
+                {bundleOpen && (
                   <Suspense
                     fallback={
                       <div className="import-placeholder" role="status">
-                        Loading import form…
+                        Loading bundle classifier…
                       </div>
                     }
                   >
-                    <CatalogueImport
+                    <BundleClassify
                       products={products}
                       Icon={Icon}
                       Garment={Garment}
-                      onClose={closeImport}
-                      onImport={importCatalogue}
-                    />
-                  </Suspense>
-                )}
-                {apiOpen && (
-                  <Suspense
-                    fallback={
-                      <div className="import-placeholder" role="status">
-                        Loading API connection form…
-                      </div>
-                    }
-                  >
-                    <CatalogueApi
-                      products={products}
-                      initialEndpoint={catalogue.endpoint}
-                      Icon={Icon}
-                      Garment={Garment}
-                      onClose={closeApi}
-                      onConnect={connectCatalogue}
+                      onClose={closeBundle}
+                      onApply={applyBundle}
                     />
                   </Suspense>
                 )}
@@ -1065,7 +1031,6 @@ export default function App() {
                           Price
                         </th>
                         <th scope="col">Availability</th>
-                        <th scope="col" className="action-cell" aria-label="Edit" />
                       </tr>
                     </thead>
                     <tbody>
@@ -1109,15 +1074,6 @@ export default function App() {
                                   : `${p.stock} available`}
                             </span>
                           </td>
-                          <td className="action-cell">
-                            <Button
-                              className="icon-button inventory-edit-action"
-                              aria-label={`Edit ${p.name}`}
-                              onClick={(event) => openInventoryEditor(p, event.currentTarget)}
-                            >
-                              <Icon name="edit" />
-                            </Button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1130,7 +1086,7 @@ export default function App() {
                     <div className="empty">
                       {products.length
                         ? `No products match “${query}”. Try a product name or SKU.`
-                        : "Your inventory is empty. Add a product or import your stock."}
+                        : "Your inventory is empty. Classify photos or add a product to get started."}
                     </div>
                   )}
                 </div>
@@ -1178,23 +1134,15 @@ export default function App() {
                 <div className="panel-foot">
                   <span>
                     {catalogue.source !== "Sample"
-                      ? catalogue.source === "API" && refreshInterval
-                        ? "Local inventory snapshot · automatic refresh in this merchant tab"
-                        : "Local catalogue snapshot · browser-tab storage · manual updates"
-                      : "Import your CSV to use your own product data"}
+                      ? "Local catalogue snapshot · browser-tab storage"
+                      : "Classify clothing photos to use your own product data"}
                   </span>
-
-                  {sync === "error" && (
-                    <span role="alert">
-                      API unavailable. Existing data retained; retry refresh.
-                    </span>
-                  )}
                 </div>
               </section>
             )}
 
           </>
-          <Footer note="Built-in products and analytics use sample data. CSV/API imports use your supplied catalogue; automatic API refresh runs only in the active merchant tab, not on a server. AI fitting and retailer checkout are not connected." />
+          <Footer note="Built-in products and analytics use sample data. AI-classified photos are stored in your browser catalogue. AI fitting and retailer checkout are not connected." />
         </main>
       </div>
       {toast && (

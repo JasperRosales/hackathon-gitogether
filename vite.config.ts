@@ -5,6 +5,17 @@ import path from 'node:path'
 
 import siteConfiguration from './.figma/make/site.json'
 
+// AMD Cloud (Radeon) is OpenAI compatible but sends no CORS headers, so the
+// browser reaches it through this same-origin proxy instead of calling the
+// upstream host directly.
+const amdCloudProxy = {
+  '/amd-cloud': {
+    target: process.env.AMD_CLOUD_BASE_URL || 'https://developer.amd.com.cn/radeon',
+    changeOrigin: true,
+    secure: true,
+    rewrite: (path: string) => path.replace(/^\/amd-cloud/, ''),
+  },
+}
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -34,6 +45,7 @@ react(),
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
+      proxy: amdCloudProxy,
       watch: {
         ignored: [
           '**/.figma/**',
@@ -43,6 +55,7 @@ react(),
     preview: {
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
       port: parseInt(process.env.PORT || '8443'),
+      proxy: amdCloudProxy,
     },
   }
 })

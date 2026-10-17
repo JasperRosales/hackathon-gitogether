@@ -9,11 +9,11 @@ export type Product = {
   imageUrl?: string
   color?: string
   variants?: Record<string, number>
-  origin?: "CSV" | "API" | "Manual"
+  origin?: "CSV" | "API" | "Manual" | "AI"
 }
 export type Catalogue = {
   products: Product[]
-  source: "Sample" | "CSV" | "API" | "Manual"
+  source: "Sample" | "CSV" | "API" | "Manual" | "AI"
   updatedAt: string
   endpoint?: string
   apiMode?: "merge" | "replace"
@@ -85,6 +85,12 @@ export function safeImageUrl(value: string) {
   } catch {
     return null
   }
+}
+
+export function safeProductImage(value: string) {
+  return /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/i.test(value)
+    ? value
+    : safeImageUrl(value)
 }
 
 export function parseCatalogueCsv(text: string): ImportResult {
@@ -232,7 +238,7 @@ export function readCatalogue(sample: Product[]): Catalogue {
   try {
     const value = JSON.parse(sessionStorage.getItem(catalogueKey) || "null")
     if (
-      ["CSV", "API", "Manual"].includes(value?.source) &&
+      ["CSV", "API", "Manual", "AI"].includes(value?.source) &&
       (value.source !== "API" || safeApiEndpoint(value.endpoint)) &&
       typeof value.updatedAt === "string" &&
       Array.isArray(value.products) &&
@@ -247,7 +253,7 @@ export function readCatalogue(sample: Product[]): Catalogue {
           p.price >= 0 &&
           Number.isInteger(p.stock) &&
           p.stock >= 0 &&
-          (!p.imageUrl || safeImageUrl(p.imageUrl)) &&
+          (!p.imageUrl || safeProductImage(p.imageUrl)) &&
           (!p.variants ||
             Object.entries(p.variants).every(
               ([size, stock]) =>
