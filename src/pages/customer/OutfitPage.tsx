@@ -270,7 +270,7 @@ export default function OutfitPage(props: OutfitPageProps) {
             <section className="builder-block builder-step" aria-labelledby="builder-step-catalogue">
               <div className="builder-step-head">
                 <span className="builder-step-number" aria-hidden="true">2</span>
-                <Heading level={2} id="builder-step-catalogue">Models to Choose from</Heading>
+                <Heading level={2} id="builder-step-catalogue">Clothes to Choose from</Heading>
                 <p className="builder-step-note">Choose the pieces you love. The builder recommends the rest.</p>
               </div>
               <section className="shop-grid" aria-label="Product collection">
