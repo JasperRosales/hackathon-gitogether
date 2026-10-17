@@ -76,11 +76,11 @@ Catalogue availability is derived from known size records, not the former hardco
 
 ## Latest page and inventory revision
 
-- Added dedicated customer and merchant landing pages, with customer single-piece/bundle builder entry points and merchant Configuration/Overview entry points.
+- Added dedicated customer and merchant landing pages, with customer single-piece/bundle builder entry points and merchant Home dashboard/Inventory dashboard entry points.
 - The customer builder supports single-piece review/fitting or inventory-aware complementary outfit recommendations. Fitting remains an original-photo preview, not generated virtual try-on.
-- Merchant Configuration includes validated CSV/API imports, manual API refresh and opt-in 30-second/1-minute/5-minute refresh while the merchant tab is visible. Updates feed the customer catalogue in the same browser session. This partially addresses automatic inventory refresh; it does not provide server scheduling, private-platform adapters, cross-device persistence or checkout-time inventory verification.
+- The merchant Inventory dashboard includes validated CSV/API imports, manual API refresh and opt-in 30-second/1-minute/5-minute refresh while the merchant tab is visible. Updates feed the customer catalogue in the same browser session. This partially addresses automatic inventory refresh; it does not provide server scheduling, private-platform adapters, cross-device persistence or checkout-time inventory verification.
 - The default refresh mode is manual. Background updates skip open import forms, do not change the current page and retain the previous data on failure.
-- Configuration also supports manual product creation, metadata/price editing, unique size records and per-size stock adjustment. Product names open the editor, so there is no separate Action column. Duplicate product codes, invalid prices/sizes and negative or fractional stock are rejected. Removal requires confirmation; deleting the last product preserves an intentionally empty catalogue through refresh.
+- The Inventory dashboard also supports manual product creation, metadata/price editing, unique size records and per-size stock adjustment. Product names open the editor, so there is no separate Action column. Duplicate product codes, invalid prices/sizes and negative or fractional stock are rejected. Removal requires confirmation; deleting the last product preserves an intentionally empty catalogue through refresh.
 - Saving or deleting API-backed inventory requires acknowledgement of switching to manual management. The endpoint is removed and polling stops; retailer records are never written. Manual inventory persists in this browser tab and feeds the customer builder, not a shared server database.
 
 No claim of improved sales, customer behavior, inventory accuracy or AI performance is justified until the respective integration and evaluation exists.
