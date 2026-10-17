@@ -74,8 +74,7 @@ No new operational claims are implied by the visual change. KPI deltas remain il
 
 ### Mobile
 
-- At 700px and below, the builder preference inspector becomes a non-modal bottom sheet. The collapsed sheet exposes the selected-piece count and “Set preferences”; expanding reveals the scrollable form.
-- The sheet has a 72dvh maximum height. It does not lock page scroll or trap focus because it is not modal. Collapsing hides its controls from keyboard navigation. Escape collapses it and returns focus to its trigger.
+- At 700px and below, the builder settings column stacks beneath the model preview and the product catalogue collapses to a single column. There is no separate preference sheet.
 - Single-column studio and product views retain clear image-first hierarchy. The cart summary follows bundle content instead of sticking.
 - At 650px and below, merchant navigation becomes a detached thin-glass bottom capsule. The desktop collapse control is hidden; all destinations remain available by icon and accessible name.
 - Bottom docks and navigation include `env(safe-area-inset-bottom)`. Content padding prevents the last row/action from being covered.

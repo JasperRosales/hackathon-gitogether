@@ -88,7 +88,9 @@ export function readClassificationConfig(
     baseUrl: (env.VITE_AMD_CLOUD_BASE_URL || DEFAULT_BASE_URL)
       .trim()
       .replace(/\/+$/, ""),
-    model: (env.VITE_AMD_CLOUD_MODEL || "").trim() || DEFAULT_MODEL,
+    model:
+      (env.VITE_AMD_CLOUD_MODEL || env.VITE_AMD_CLOUD_VISION_MODEL || "").trim() ||
+      DEFAULT_MODEL,
   }
 }
 

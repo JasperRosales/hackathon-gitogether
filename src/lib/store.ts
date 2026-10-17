@@ -32,7 +32,7 @@ const sessionSlice = createSlice({
 type CatalogueState = Catalogue
 const catalogueSlice = createSlice({
   name: "catalogue",
-  initialState: { products: [] as Product[], source: "Sample", updatedAt: "" } as CatalogueState,
+  initialState: { products: [] as Product[], source: "None", updatedAt: "" } as CatalogueState,
   reducers: {
     setCatalogue(_state, action: PayloadAction<Catalogue>) {
       return action.payload
@@ -41,17 +41,13 @@ const catalogueSlice = createSlice({
 })
 
 type ShopState = {
-  builderMode: "single" | "bundle"
   category: string
   search: string
 }
 const shopSlice = createSlice({
   name: "shop",
-  initialState: { builderMode: "bundle", category: "All", search: "" } as ShopState,
+  initialState: { category: "All", search: "" } as ShopState,
   reducers: {
-    setBuilderMode(state, action: PayloadAction<ShopState["builderMode"]>) {
-      state.builderMode = action.payload
-    },
     setCategory(state, action: PayloadAction<string>) {
       state.category = action.payload
     },
@@ -64,7 +60,7 @@ const shopSlice = createSlice({
 export const { setToast, clearToast } = uiSlice.actions
 export const { setSession, clearSession } = sessionSlice.actions
 export const { setCatalogue } = catalogueSlice.actions
-export const { setBuilderMode, setCategory, setSearch } = shopSlice.actions
+export const { setCategory, setSearch } = shopSlice.actions
 
 export const store = configureStore({
   reducer: {
