@@ -26,9 +26,9 @@ type Options = {
  * Owns the browser-local catalogue: persistence, CSV/API imports, manual
  * inventory edits and the optional background API refresh loop.
  */
-export function useCatalogue(sample: Product[], { notify, isBusy, active }: Options) {
+export function useCatalogue({ notify, isBusy, active }: Options) {
   const dispatch = useDispatch()
-  const [catalogue, setCatalogue] = useState(() => readCatalogue(sample))
+  const [catalogue, setCatalogue] = useState(readCatalogue)
   useEffect(() => {
     dispatch(setCatalogueAction(catalogue))
   }, [catalogue, dispatch])

@@ -1,12 +1,10 @@
-import { productColor, productTotal, variantStock } from "./catalogue"
+import { productColor, productTotal } from "./catalogue"
 import type { Product } from "./catalogue"
 
 export type Preferences = {
-  size: string
   style: string
   occasion: string
   palette: string
-  budget: number
   accessories: boolean
 }
 
@@ -18,7 +16,7 @@ export function compatible(product: Product, prefs: Preferences) {
     productColor(product),
   )
   return (
-    variantStock(product, prefs.size) > 0 &&
+    product.stock > 0 &&
     (["Any neutral", "Any color"].includes(prefs.palette) ||
       (prefs.palette === "Light neutrals" ? light : dark))
   )
@@ -32,10 +30,7 @@ export function recommendOutfit(
   const selectedPieces = Array.isArray(selected) ? selected : [selected]
   if (
     !selectedPieces.length ||
-    !Number.isFinite(prefs.budget) ||
-    prefs.budget <= 0 ||
     selectedPieces.some((p) => !compatible(p, prefs)) ||
-    productTotal(selectedPieces) > prefs.budget ||
     new Set(selectedPieces.map((p) => p.sku)).size !== selectedPieces.length
   )
     return null
@@ -74,10 +69,8 @@ export function recommendOutfit(
   const score = (bundle: Product[]) =>
     bundle.reduce((sum, p) => sum + productScore(p), 0)
   return (
-    candidates
-      .filter((bundle) => productTotal(bundle) <= prefs.budget)
-      .sort(
-        (a, b) => score(b) - score(a) || productTotal(a) - productTotal(b),
-      )[0] || null
+    candidates.sort(
+      (a, b) => score(b) - score(a) || productTotal(a) - productTotal(b),
+    )[0] || null
   )
 }

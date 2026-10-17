@@ -11,8 +11,6 @@ import {
 import { ArrowRight } from "lucide-react"
 import { Button } from "./ui/button"
 import { Card, CardDescription, CardTitle } from "./ui/card"
-import { useAppDispatch } from "@/lib/hooks"
-import { setBuilderMode } from "@/lib/store"
 import model1 from "@/assets/model1.jpg"
 import model2 from "@/assets/model2.jpg"
 import model3 from "@/assets/model3.jpg"
@@ -25,7 +23,7 @@ type Props = {
   source?: string
   Icon: ComponentType<{ name: string }>
   onPrimary: () => void
-  onSecondary: () => void
+  onSecondary?: () => void
 }
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
@@ -76,7 +74,6 @@ export default function ExperienceLanding({
   onPrimary,
   onSecondary,
 }: Props) {
-  const dispatch = useAppDispatch()
   const merchant = audience === "merchant"
   const reduce = useReducedMotion()
 
@@ -104,12 +101,7 @@ export default function ExperienceLanding({
       ]
 
   const primary = () => {
-    dispatch(setBuilderMode("bundle"))
     onPrimary()
-  }
-  const secondary = () => {
-    dispatch(setBuilderMode("single"))
-    onSecondary()
   }
 
   return (
@@ -150,16 +142,18 @@ export default function ExperienceLanding({
                   <ArrowRight className="size-4" />
                 </Button>
               </motion.span>
-              <motion.span whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} transition={springTap}>
-                <Button onClick={secondary} variant="outline" className="h-11 px-6">
-                  {merchant ? "Open overview" : "Style a single piece"}
-                </Button>
-              </motion.span>
+              {onSecondary && (
+                <motion.span whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} transition={springTap}>
+                  <Button onClick={onSecondary} variant="outline" className="h-11 px-6">
+                    {merchant ? "Open overview" : "Style a single piece"}
+                  </Button>
+                </motion.span>
+              )}
             </motion.div>
             <motion.span variants={rise} className="landing-caption">
               {merchant
                 ? "Read-only connections. Your retailer remains in control."
-                : "Single pieces or complete outfits. Always your choice."}
+                : "Start with one piece. The builder recommends the rest."}
             </motion.span>
           </div>
         </motion.section>
@@ -176,7 +170,7 @@ export default function ExperienceLanding({
                 <motion.div variants={tileIn} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} custom={0}>
                   <Card className="landing-mosaic-tall landing-store-card">
                     <span className="landing-store-mark">f.</span>
-                    <CardTitle>{productCount} +</CardTitle>
+                    <CardTitle>{productCount}{productCount ? " +" : ""}</CardTitle>
                     <CardDescription>Products in catalogue</CardDescription>
                   </Card>
                 </motion.div>

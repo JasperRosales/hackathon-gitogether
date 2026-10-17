@@ -6,12 +6,8 @@ type Props = {
   image: string
   category: string
   setCategory: (category: string) => void
-  /** Landing primary CTA: "Build my outfit" — open the bundle builder. */
+  /** Open the outfit builder. */
   onStartBuilder: () => void
-  /** Landing secondary CTA: "Style a single piece". */
-  onStyleSingle: () => void
-  /** Home card CTA: browse the collection to purchase. */
-  onShopPurchase: () => void
 }
 
 export default function HomePage({
@@ -19,8 +15,6 @@ export default function HomePage({
   category,
   setCategory,
   onStartBuilder,
-  onStyleSingle,
-  onShopPurchase,
 }: Props) {
   return (
     <>
@@ -29,12 +23,11 @@ export default function HomePage({
         image={image}
         Icon={Icon}
         onPrimary={onStartBuilder}
-        onSecondary={onStyleSingle}
       />
       <section className="home-entry" aria-label="Start your flow">
         <div className="home-entry-heading">
           <Heading level={2}>Start your flow</Heading>
-          <p>Pick a category, then choose how you want to shop.</p>
+          <p>Pick a category, then open the builder to build your look.</p>
         </div>
         <div className="home-entry-steps">
           <div className="home-step">
@@ -58,16 +51,10 @@ export default function HomePage({
           <div className="home-step">
             <span className="home-step-number" aria-hidden="true">2</span>
             <div className="home-paths">
-              <button className="home-path-card" onClick={onShopPurchase}>
-                <span className="landing-feature-icon"><Icon name="bag" /></span>
-                <strong>Purchase</strong>
-                <small>Browse {category === "All" ? "the collection" : category} and add pieces straight to your cart.</small>
-                <span className="text-button">Shop to purchase <Icon name="arrow" /></span>
-              </button>
               <button className="home-path-card" onClick={onStartBuilder}>
                 <span className="landing-feature-icon"><Icon name="layers" /></span>
-                <strong>Check the builder</strong>
-                <small>Fit pieces on a model, get paired recommendations, output a complete look.</small>
+                <strong>Open the outfit builder</strong>
+                <small>Choose a model, try pieces on, and let the builder recommend a complete look.</small>
                 <span className="text-button">Open outfit builder <Icon name="arrow" /></span>
               </button>
             </div>

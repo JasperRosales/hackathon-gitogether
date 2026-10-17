@@ -141,7 +141,7 @@ export default function InventoryDashboard({
           </label>
         </div>
         <div className="panel-foot" role="status">
-          <span>{sync === "loading" ? "Updating inventory…" : sync === "error" ? "Update failed. Previous inventory retained." : `Last update: ${catalogue.updatedAt}`}</span>
+          <span>{sync === "loading" ? "Updating inventory…" : sync === "error" ? "Update failed. Previous inventory retained." : catalogue.updatedAt ? `Last update: ${catalogue.updatedAt}` : "No catalogue yet"}</span>
           <span>{catalogue.source === "API" && refreshInterval ? "Automatic refresh enabled" : "Manual updates"}</span>
         </div>
       </section>
@@ -380,11 +380,11 @@ export default function InventoryDashboard({
         )}
         <div className="panel-foot">
           <span>
-            {catalogue.source !== "Sample"
+            {catalogue.source !== "None"
               ? catalogue.source === "API" && refreshInterval
                 ? "Local inventory snapshot · automatic refresh in this merchant tab"
                 : "Local catalogue snapshot · browser-tab storage · manual updates"
-              : "Import your CSV to use your own product data"}
+              : "Import a CSV, connect an API or add a product to build your catalogue"}
           </span>
           {sync === "error" && (
             <span role="alert">

@@ -13,7 +13,7 @@ export type Product = {
 }
 export type Catalogue = {
   products: Product[]
-  source: "Sample" | "CSV" | "API" | "Manual"
+  source: "None" | "CSV" | "API" | "Manual"
   updatedAt: string
   endpoint?: string
   apiMode?: "merge" | "replace"
@@ -24,40 +24,20 @@ type ImportResult = {
   records: number
 }
 export const catalogueKey = "forma-local-catalogue-v1"
-export const sampleSizes = ["XS", "S", "M", "L", "XL"]
-const sampleColors: Record<string, string> = {
-  "AT-BL-001": "Sand",
-  "AT-SH-002": "White",
-  "AT-TR-003": "Stone",
-  "AT-LF-004": "Black",
-  "AT-VS-005": "White",
-  "AT-TR-006": "Black",
-  "AT-SN-007": "White",
-  "AT-BG-008": "Black",
-}
+export const defaultSizes = ["XS", "S", "M", "L", "XL"]
 export function productColor(product: Product) {
-  return (
-    product.color ||
-    (Object.prototype.hasOwnProperty.call(sampleColors, product.sku)
-      ? sampleColors[product.sku]
-      : "Unspecified")
-  )
+  return product.color || "Unspecified"
 }
 export function variantStock(product: Product, size: string) {
   if (product.variants)
     return Object.prototype.hasOwnProperty.call(product.variants, size)
       ? product.variants[size]
       : 0
-  if (
-    !sampleSizes.includes(size) ||
-    (product.sku === "AT-LF-004" && size === "XL") ||
-    (product.sku === "AT-TR-003" && size === "XS")
-  )
-    return 0
+  if (!defaultSizes.includes(size)) return 0
   return product.stock
 }
 export function productSizes(product: Product) {
-  return product.variants ? Object.keys(product.variants) : sampleSizes
+  return product.variants ? Object.keys(product.variants) : defaultSizes
 }
 export function productTotal(products: Product[]) {
   return (
@@ -69,8 +49,8 @@ export function productTotal(products: Product[]) {
 }
 export function catalogueSizes(products: Product[]) {
   return Array.from(new Set(products.flatMap(productSizes))).sort((a, b) =>
-    sampleSizes.includes(a) && sampleSizes.includes(b)
-      ? sampleSizes.indexOf(a) - sampleSizes.indexOf(b)
+    defaultSizes.includes(a) && defaultSizes.includes(b)
+      ? defaultSizes.indexOf(a) - defaultSizes.indexOf(b)
       : a.localeCompare(b, undefined, { numeric: true }),
   )
 }
@@ -228,7 +208,7 @@ export function mergeCatalogue(
   for (const product of incoming) merged.set(product.sku, product)
   return Array.from(merged.values())
 }
-export function readCatalogue(sample: Product[]): Catalogue {
+export function readCatalogue(): Catalogue {
   try {
     const value = JSON.parse(sessionStorage.getItem(catalogueKey) || "null")
     if (
@@ -259,9 +239,11 @@ export function readCatalogue(sample: Product[]): Catalogue {
     )
       return value
   } catch {
-    /* Invalid or inaccessible storage falls back to sample data. */
+    /* Invalid or inaccessible storage falls back to an empty catalogue. */
   }
-  return { products: sample, source: "Sample", updatedAt: "Today, 09:42" }
+  // No built-in products: the catalogue starts empty until a merchant imports
+  // a CSV, connects a public API or adds products manually.
+  return { products: [], source: "None", updatedAt: "" }
 }
 
 export function safeApiEndpoint(value: string): string | null {

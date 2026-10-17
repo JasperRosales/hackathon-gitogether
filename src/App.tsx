@@ -13,7 +13,6 @@ import {
   clearSession as clearSessionAction,
 } from "./lib/store"
 import { useCatalogue } from "./lib/useCatalogue"
-import { sampleProducts } from "./lib/sampleProducts"
 import {
   readSession,
   storeSession,
@@ -61,20 +60,20 @@ export default function App() {
   // InventoryDashboard reports whether a modal or refresh blocks background
   // API refreshes; the catalogue hook reads this ref on each tick.
   const busyRef = useRef<() => boolean>(() => false)
-  const api = useCatalogue(sampleProducts, {
+  const api = useCatalogue({
     notify,
     isBusy: () => busyRef.current(),
     active: route === "#/merchant" && session?.role === "merchant",
   })
   const { products, catalogue } = api
   const sourceLabel =
-    catalogue.source === "API"
-      ? "API connection"
-      : catalogue.source === "CSV"
-        ? "CSV import"
-        : catalogue.source === "Manual"
-          ? "Manual inventory"
-          : "Built-in catalogue"
+    catalogue.source === "None"
+      ? "No catalogue yet"
+      : catalogue.source === "API"
+        ? "API connection"
+        : catalogue.source === "CSV"
+          ? "CSV import"
+          : "Manual inventory"
   const login = (account: Session) => {
     storeSession(account)
     setSession(account)
@@ -210,7 +209,7 @@ export default function App() {
               busyRef={busyRef}
             />
           )}
-          <Footer note="Built-in products and analytics use sample data. CSV/API imports use your supplied catalogue; automatic API refresh runs only in the active merchant tab, not on a server. AI fitting and retailer checkout are not connected." />
+          <Footer note="Products come from your imported catalogue (CSV, API or manual) in this browser tab; dashboard analytics use illustrative sample figures. Automatic API refresh runs only in the active merchant tab, not on a server. AI fitting and retailer checkout are not connected." />
         </main>
       </div>
       {toast && (

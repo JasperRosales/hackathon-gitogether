@@ -17,7 +17,7 @@ This is the canonical project structure. Start with task-relevant files below. O
 - `src/App.tsx` - Routing shell: customer storefront, demo login and the merchant admin shell (Home dashboard / Inventory dashboard)
 - `src/pages/` - Page components: `LoginPage.tsx`, `customer/HomePage.tsx`, `customer/OutfitPage.tsx`, `admin/HomeDashboard.tsx`, `admin/InventoryDashboard.tsx`
 - `src/components/CustomerShop.tsx` - Customer storefront shell that owns shop state and swaps between the customer pages
-- `src/lib/` - Shared logic: `catalogue.ts`, `useCatalogue.ts`, `recommend.ts`, `session.ts`, `sampleProducts.ts`, `store.ts`
+- `src/lib/` - Shared logic: `catalogue.ts`, `useCatalogue.ts`, `recommend.ts`, `session.ts`, `store.ts`
 - `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
 - `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
 - `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
