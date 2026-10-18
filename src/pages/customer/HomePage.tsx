@@ -1,16 +1,16 @@
+import ProjectLanding from "@/components/ProjectLanding"
 import { Button, Heading } from "@/components/ui"
 import { Icon } from "@/components/Icon"
 import ExperienceLanding from "@/components/ExperienceLanding"
 import { classificationCategories } from "@/lib/classification"
 
 type Props = {
-  image: string
-  category: string
-  setCategory: (category: string) => void
   /** Open the outfit builder. */
   onStartBuilder: () => void
 }
 
+export default function HomePage({ onStartBuilder }: Props) {
+  return <ProjectLanding onStartBuilder={onStartBuilder} />
 export default function HomePage({
   image,
   category,
