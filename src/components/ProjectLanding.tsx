@@ -1,21 +1,11 @@
-import { useRef, useState } from "react"
 import ExperienceLanding from "@/components/ExperienceLanding"
 import { Icon } from "@/components/Icon"
 import { initials } from "@/lib/session"
-
-type SectionId = "home" | "about" | "team" | "links"
 
 type Props = {
   /** Open the outfit builder. */
   onStartBuilder: () => void
 }
-
-const SECTIONS: { id: SectionId; label: string }[] = [
-  { id: "home", label: "Home" },
-  { id: "about", label: "About" },
-  { id: "team", label: "Team" },
-  { id: "links", label: "Links" },
-]
 
 const ABOUT: { title: string; body: string }[] = [
   {
@@ -41,46 +31,12 @@ const LINKS: { label: string; href?: string }[] = [
 ]
 
 export default function ProjectLanding({ onStartBuilder }: Props) {
-  const sectionRefs = useRef<Record<SectionId, HTMLElement | null>>({
-    home: null,
-    about: null,
-    team: null,
-    links: null,
-  })
-  const [active, setActive] = useState<SectionId>("home")
-
-  const goToSection = (id: SectionId) => {
-    setActive(id)
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    sectionRefs.current[id]?.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
-      block: "start",
-    })
-  }
-
   return (
     <>
-      <nav className="landing-section-nav" aria-label="Landing sections">
-        {SECTIONS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            className={id === active ? "active" : undefined}
-            aria-current={id === active ? "true" : undefined}
-            onClick={() => goToSection(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
       <section
         id="home"
         className="landing-section"
         aria-label="Home"
-        ref={(el) => {
-          sectionRefs.current.home = el
-        }}
       >
         <ExperienceLanding audience="customer" Icon={Icon} onPrimary={onStartBuilder} />
       </section>
@@ -89,9 +45,6 @@ export default function ProjectLanding({ onStartBuilder }: Props) {
         id="about"
         className="landing-section"
         aria-labelledby="landing-about-title"
-        ref={(el) => {
-          sectionRefs.current.about = el
-        }}
       >
         <div className="landing-section-heading">
           <span className="eyebrow">ABOUT</span>
@@ -111,9 +64,6 @@ export default function ProjectLanding({ onStartBuilder }: Props) {
         id="team"
         className="landing-section"
         aria-labelledby="landing-team-title"
-        ref={(el) => {
-          sectionRefs.current.team = el
-        }}
       >
         <div className="landing-section-heading">
           <span className="eyebrow">TEAM</span>
@@ -136,9 +86,6 @@ export default function ProjectLanding({ onStartBuilder }: Props) {
         id="links"
         className="landing-section"
         aria-labelledby="landing-links-title"
-        ref={(el) => {
-          sectionRefs.current.links = el
-        }}
       >
         <div className="landing-section-heading">
           <span className="eyebrow">LINKS</span>
