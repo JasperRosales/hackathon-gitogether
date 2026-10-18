@@ -372,7 +372,7 @@ export default function BundleClassify({
           <strong>How it works</strong>
           <p>
             Each photo is sent to the AMD Cloud vision model, which identifies
-            the garment and suggests a name, category and colour.
+            the item and suggests a name, category and colour.
           </p>
           <p>
             Review the suggestions, adjust anything, then apply. Applied items
