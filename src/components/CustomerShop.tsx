@@ -3,6 +3,9 @@ import type { Product } from "@/lib/catalogue"
 import { productTotal } from "@/lib/catalogue"
 import { compatible, recommendOutfit } from "@/lib/recommend"
 import type { Preferences } from "@/lib/recommend"
+import { recommendOutfitFromPhoto } from "@/lib/photoStylist"
+import { isVisionConfigured } from "@/lib/aiConfig"
+import type { AssistantActions } from "@/components/StylistChat"
 import { Button, Input } from "@/components/ui"
 import { Icon } from "@/components/Icon"
 import Footer from "@/components/Footer"
@@ -19,6 +22,18 @@ type StoredCartBundle = Omit<CartBundle, "quantities" | "selectedSkus"> & {
   selectedSkus?: string[]
 }
 
+/** Model photos are object URLs; the AI service needs a data URL. */
+async function toDataUrl(src: string): Promise<string> {
+  const response = await fetch(src)
+  const blob = await response.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error("Could not read the model photo."))
+    reader.readAsDataURL(blob)
+  })
+}
+
 export default function CustomerShop({
   products,
   image,
@@ -26,6 +41,7 @@ export default function CustomerShop({
   onLogin,
   onLogout,
   notify,
+  onAssistantActions,
 }: {
   products: Product[]
   image: string
@@ -33,6 +49,7 @@ export default function CustomerShop({
   onLogin: () => void
   onLogout: () => void
   notify: (message: string) => void
+  onAssistantActions?: (actions: AssistantActions | null) => void
 }) {
   const dispatch = useAppDispatch()
   const [tab, setTab] = useState<ShopTab>("home")
@@ -106,6 +123,12 @@ export default function CustomerShop({
   const [activePhoto, setActivePhoto] = useState<number | null>(null)
   const activeModelSrc = activePhoto !== null && photos[activePhoto] ? photos[activePhoto] : null
   const [previewState, setPreviewState] = useState("idle")
+  const [photoReco, setPhotoReco] = useState<{
+    status: "idle" | "loading" | "error"
+    warnings: string[]
+    error: string
+  }>({ status: "idle", warnings: [], error: "" })
+  const visionConfigured = isVisionConfigured()
   const [cartState, setCart] = useState<StoredCartBundle[]>([])
   // Hot reload can retain bundles created before piece selection was added.
   const cart: CartBundle[] = cartState.map((entry) => ({
@@ -267,6 +290,60 @@ export default function CustomerShop({
     }])
     notify(`${piece.name} added to your cart.`)
   }
+  const runPhotoRecommendation = async () => {
+    if (!activeModelSrc) {
+      notify("Upload a model photo in the fitting studio first.")
+      return
+    }
+    setPhotoReco({ status: "loading", warnings: [], error: "" })
+    try {
+      const dataUrl = await toDataUrl(activeModelSrc)
+      const result = await recommendOutfitFromPhoto(products, dataUrl, {
+        preferences: {
+          style: prefs.style,
+          occasion: prefs.occasion,
+          palette: prefs.palette,
+        },
+      })
+      const items = result.items
+        .map((item) => products.find((p) => p.sku === item.sku))
+        .filter((p): p is Product => Boolean(p))
+      setBundle(items)
+      setError("")
+      setPreviewState("idle")
+      clearTimeout(previewTimer.current)
+      setPhotoReco({
+        status: result.items.length ? "idle" : "error",
+        warnings: result.warnings,
+        error: result.items.length
+          ? ""
+          : "The stylist could not build a complete look from the catalogue.",
+      })
+    } catch (cause) {
+      setPhotoReco({
+        status: "error",
+        warnings: [],
+        error:
+          cause instanceof Error ? cause.message : "AI recommendation failed.",
+      })
+    }
+  }
+  const assistantActionsRef = useRef({
+    addToOutfit: togglePiece,
+    addToCart: addCartItem,
+  })
+  assistantActionsRef.current = {
+    addToOutfit: togglePiece,
+    addToCart: addCartItem,
+  }
+  useEffect(() => {
+    if (!onAssistantActions) return
+    onAssistantActions({
+      addToOutfit: (product) => assistantActionsRef.current.addToOutfit(product),
+      addToCart: (product) => assistantActionsRef.current.addToCart(product),
+    })
+    return () => onAssistantActions(null)
+  }, [onAssistantActions])
   const buildTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => clearTimeout(buildTimer.current), [])
   // Auto-recommend while working in the builder: picking pieces or tuning the
@@ -413,6 +490,10 @@ export default function CustomerShop({
             activeModelSrc={activeModelSrc}
             removePhoto={removePhoto}
             upload={upload}
+            photoReco={photoReco}
+            photoConfigured={visionConfigured}
+            hasModelPhoto={Boolean(activeModelSrc)}
+            runPhotoRecommendation={runPhotoRecommendation}
           />
         )}
         <Footer note="Recommendations use catalogue rules and available stock. Photos stay in this browser; AI fitting and retailer checkout are not connected. Inventory freshness depends on the merchant connection." />

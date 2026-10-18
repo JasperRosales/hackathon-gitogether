@@ -84,6 +84,10 @@ export type OutfitPageProps = {
   activeModelSrc: string | null
   removePhoto: (index: number) => void
   upload: MutableRefObject<HTMLInputElement | null>
+  photoReco: { status: "idle" | "loading" | "error"; warnings: string[]; error: string }
+  photoConfigured: boolean
+  hasModelPhoto: boolean
+  runPhotoRecommendation: () => void
 }
 
 export default function OutfitPage(props: OutfitPageProps) {
@@ -129,6 +133,10 @@ export default function OutfitPage(props: OutfitPageProps) {
     activeModelSrc,
     removePhoto,
     upload,
+    photoReco,
+    photoConfigured,
+    hasModelPhoto,
+    runPhotoRecommendation,
   } = props
   const collectionPages = Math.max(1, Math.ceil(filtered.length / 12))
   const outfitRows = (
@@ -380,6 +388,42 @@ export default function OutfitPage(props: OutfitPageProps) {
                   <p className="shop-demo-note">Select one or more pieces above and the builder recommends a coordinated look.</p>
                 )}
               </section>
+              <div className="builder-ai">
+                <Button
+                  className="button primary builder-ai-button"
+                  disabled={
+                    !photoConfigured || !hasModelPhoto || photoReco.status === "loading"
+                  }
+                  onClick={runPhotoRecommendation}
+                >
+                  <Icon name="sparkle" />
+                  {photoReco.status === "loading"
+                    ? "Styling your look…"
+                    : "Get AI recommendation"}
+                </Button>
+                <p className="shop-demo-note">
+                  {hasModelPhoto
+                    ? "Your uploaded model photo is sent to the configured AI endpoint to build this look."
+                    : "Upload a model photo in the fitting studio to get an AI recommendation."}
+                </p>
+                {!photoConfigured && (
+                  <p className="shop-demo-note">
+                    Photo styling is not configured. Set the AMD vision key to enable it.
+                  </p>
+                )}
+                {photoReco.error && (
+                  <div className="shop-error" role="alert">
+                    {photoReco.error}
+                  </div>
+                )}
+                {photoReco.warnings.length > 0 && (
+                  <ul className="builder-ai-warnings">
+                    {photoReco.warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               {error && (
                 <div className="shop-error" role="alert">
                   {error}

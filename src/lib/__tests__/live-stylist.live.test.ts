@@ -12,6 +12,10 @@ import { inventory } from "./fixtures"
 
 const conversation = readConversationConfig(import.meta.env)
 const vision = readVisionConfig(import.meta.env)
+// Node has no Vite proxy, so expand the relative proxy path to the real host.
+if (vision.baseUrl.startsWith("/")) {
+  vision.baseUrl = `https://developer.amd.com.cn/radeon${vision.baseUrl.replace(/^\/amd-cloud/, "")}`
+}
 
 const photoDataUrl = `data:image/jpeg;base64,${readFileSync(
   new URL("../../assets/model1.jpg", import.meta.url),

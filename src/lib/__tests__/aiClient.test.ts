@@ -58,6 +58,38 @@ describe("chat", () => {
     ).rejects.toMatchObject({ code: "http", message: "bad model" })
   })
 
+  it("retries a 429 and returns the retried result", async () => {
+    let calls = 0
+    const fetchImpl = (async () => {
+      calls += 1
+      if (calls === 1)
+        return apiResponse(
+          { error: { message: "rate limited" } },
+          { ok: false, status: 429, headers: { "retry-after": "0" } },
+        )
+      return contentResponse("recovered")
+    }) as typeof fetch
+    await expect(
+      chat({ model: "m", messages: [], config, fetchImpl }),
+    ).resolves.toBe("recovered")
+    expect(calls).toBe(2)
+  })
+
+  it("does not retry a long Retry-After and reports the rate limit", async () => {
+    let calls = 0
+    const fetchImpl = (async () => {
+      calls += 1
+      return apiResponse(
+        { error: { message: "slow down" } },
+        { ok: false, status: 429, headers: { "retry-after": "120" } },
+      )
+    }) as typeof fetch
+    await expect(
+      chat({ model: "m", messages: [], config, fetchImpl }),
+    ).rejects.toThrow(/Rate limited/)
+    expect(calls).toBe(1)
+  })
+
   it("maps an empty completion to a parse error", async () => {
     const { fetchImpl } = captureFetch("")
     await expect(

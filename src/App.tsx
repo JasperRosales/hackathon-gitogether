@@ -3,6 +3,8 @@ import { useDispatch } from "react-redux"
 import { Button, Heading } from "./components/ui"
 import { Icon } from "./components/Icon"
 import CustomerShop from "./components/CustomerShop"
+import StylistChat from "./components/StylistChat"
+import type { AssistantActions } from "./components/StylistChat"
 import Footer from "./components/Footer"
 import LoginPage from "./pages/LoginPage"
 import HomeDashboard from "./pages/admin/HomeDashboard"
@@ -57,6 +59,8 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [query, setQuery] = useState("")
   const [period, setPeriod] = useState("Last 30 days")
+  const [assistantActions, setAssistantActions] =
+    useState<AssistantActions | null>(null)
   // InventoryDashboard reports whether a modal is open; the catalogue hook
   // reads this ref before running any background work.
   const busyRef = useRef<() => boolean>(() => false)
@@ -110,6 +114,13 @@ export default function App() {
           session={session}
           onLogin={() => navigate("/login")}
           onLogout={logout}
+          notify={notify}
+          onAssistantActions={setAssistantActions}
+        />
+        <StylistChat
+          products={products}
+          actions={assistantActions}
+          onOpenShop={() => navigate("/shop")}
           notify={notify}
         />
         {toast && (
@@ -214,6 +225,12 @@ export default function App() {
           <Footer note="Products come from manual entries or AI photo classification in this browser tab; dashboard analytics use illustrative sample figures. AI fitting and retailer checkout are not connected." />
         </main>
       </div>
+      <StylistChat
+        products={products}
+        actions={assistantActions}
+        onOpenShop={() => navigate("/shop")}
+        notify={notify}
+      />
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" />

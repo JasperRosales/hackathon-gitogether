@@ -78,18 +78,20 @@ export const photoDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
 
 export function apiResponse(
   payload: unknown,
-  init: { ok?: boolean; status?: number } = {},
+  init: { ok?: boolean; status?: number; headers?: Record<string, string> } = {},
 ): Response {
+  const headers = init.headers ?? {}
   return {
     ok: init.ok ?? true,
     status: init.status ?? 200,
+    headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
     json: async () => payload,
   } as unknown as Response
 }
 
 export function contentResponse(
   content: string,
-  init: { ok?: boolean; status?: number } = {},
+  init: { ok?: boolean; status?: number; headers?: Record<string, string> } = {},
 ): Response {
   return apiResponse({ choices: [{ message: { content } }] }, init)
 }
