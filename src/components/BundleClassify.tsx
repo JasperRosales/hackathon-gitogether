@@ -441,7 +441,7 @@ export default function BundleClassify({
                       <td>
                         <div className="bundle-thumb">
                           {item.dataUrl ? (
-                            <img src={item.dataUrl} alt={item.name} />
+                            <img loading="lazy" decoding="async" src={item.dataUrl} alt={item.name} />
                           ) : (
                             <Garment type={item.category} />
                           )}

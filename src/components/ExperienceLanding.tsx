@@ -219,7 +219,7 @@ export default function ExperienceLanding({
                   custom={0}
                   className="landing-photo landing-mosaic-tall"
                 >
-                  <img src={model1} alt="Fashion model wearing a styled outfit" />
+                  <img loading="lazy" decoding="async" src={model1} alt="Fashion model wearing a styled outfit" />
                   <span className="landing-photo-label">The look is yours to build.</span>
                 </motion.figure>
               </motion.div>
@@ -233,6 +233,8 @@ export default function ExperienceLanding({
                   className="landing-photo landing-mosaic-mini-photo"
                 >
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={model2}
                     alt="Collection detail — model wearing a tailored piece"
                   />
@@ -249,6 +251,8 @@ export default function ExperienceLanding({
                   className="landing-photo landing-mosaic-mini-photo"
                 >
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={model3}
                     alt="Collection detail — model wearing a complete outfit"
                   />
@@ -264,7 +268,7 @@ export default function ExperienceLanding({
                   custom={1}
                   className="landing-photo landing-mosaic-tall"
                 >
-                  <img src={model4} alt="Fashion model wearing a styled outfit" />
+                  <img loading="lazy" decoding="async" src={model4} alt="Fashion model wearing a styled outfit" />
                   <span className="landing-photo-label">Review your fit.</span>
                   <small>Ola Szkolda / Unsplash</small>
                 </motion.figure>

@@ -1,14 +1,9 @@
-import { useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import { useDispatch } from "react-redux"
 import { Button, Heading } from "./components/ui"
 import { Icon } from "./components/Icon"
-import CustomerShop from "./components/CustomerShop"
-import StylistChat from "./components/StylistChat"
-import type { AssistantActions } from "./components/StylistChat"
 import Footer from "./components/Footer"
-import LoginPage from "./pages/LoginPage"
-import HomeDashboard from "./pages/admin/HomeDashboard"
-import InventoryDashboard from "./pages/admin/InventoryDashboard"
+import type { AssistantActions } from "./components/StylistChat"
 import fittingModel from "./assets/fitting-fashion-model.jpg"
 import {
   setSession as setSessionAction,
@@ -23,9 +18,21 @@ import {
 } from "./lib/session"
 import type { Session } from "./lib/session"
 
+const CustomerShop = lazy(() => import("./components/CustomerShop"))
+const StylistChat = lazy(() => import("./components/StylistChat"))
+const LoginPage = lazy(() => import("./pages/LoginPage"))
+const HomeDashboard = lazy(() => import("./pages/admin/HomeDashboard"))
+const InventoryDashboard = lazy(() => import("./pages/admin/InventoryDashboard"))
+
 const image = fittingModel
 
 type AdminPage = "home" | "inventory"
+
+const loadingFallback = (
+  <div className="route-loading" role="status">
+    Loading…
+  </div>
+)
 
 export default function App() {
   const dispatch = useDispatch()
@@ -61,6 +68,11 @@ export default function App() {
   const [period, setPeriod] = useState("Last 30 days")
   const [assistantActions, setAssistantActions] =
     useState<AssistantActions | null>(null)
+  const [postLoginRoute, setPostLoginRoute] = useState<string | null>(null)
+  const requireLogin = (returnTo: string) => {
+    setPostLoginRoute(returnTo)
+    navigate("/login")
+  }
   // InventoryDashboard reports whether a modal is open; the catalogue hook
   // reads this ref before running any background work.
   const busyRef = useRef<() => boolean>(() => false)
@@ -85,7 +97,10 @@ export default function App() {
     setSession(account)
     setToast("")
     setAdminPage("home")
-    navigate(account.role === "merchant" ? "/merchant" : "/shop")
+    const target =
+      account.role === "merchant" ? "/merchant" : postLoginRoute ?? "/shop"
+    setPostLoginRoute(null)
+    navigate(target)
   }
   const logout = () => {
     clearStoredSession()
@@ -104,9 +119,14 @@ export default function App() {
     }
   }, [needsMerchantLogin])
   if (route === "#/login" || needsMerchantLogin)
-    return <LoginPage onLogin={login} />
+    return (
+      <Suspense fallback={loadingFallback}>
+        <LoginPage onLogin={login} />
+      </Suspense>
+    )
   if (route !== "#/merchant")
     return (
+      <Suspense fallback={loadingFallback}>
       <div className="customer-page">
         <CustomerShop
           products={products}
@@ -116,6 +136,7 @@ export default function App() {
           onLogout={logout}
           notify={notify}
           onAssistantActions={setAssistantActions}
+          onRequireLogin={() => requireLogin("/shop/outfits/fitting")}
         />
         <StylistChat
           products={products}
@@ -137,8 +158,10 @@ export default function App() {
           </div>
         )}
       </div>
+      </Suspense>
     )
   return (
+    <Suspense fallback={loadingFallback}>
     <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}`}>
       <aside className="sidebar" aria-label="Admin workspace">
         <div className="brand">
@@ -225,12 +248,6 @@ export default function App() {
           <Footer note="Products come from manual entries or AI photo classification in this browser tab; dashboard analytics use illustrative sample figures. AI fitting and retailer checkout are not connected." />
         </main>
       </div>
-      <StylistChat
-        products={products}
-        actions={assistantActions}
-        onOpenShop={() => navigate("/shop")}
-        notify={notify}
-      />
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" />
@@ -245,5 +262,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </Suspense>
   )
 }

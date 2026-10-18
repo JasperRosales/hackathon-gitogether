@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react"
+﻿import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import type { Product } from "@/lib/catalogue"
 import { productTotal } from "@/lib/catalogue"
 import { compatible, recommendOutfit } from "@/lib/recommend"
@@ -9,11 +9,12 @@ import type { AssistantActions } from "@/components/StylistChat"
 import { Button, Input } from "@/components/ui"
 import { Icon } from "@/components/Icon"
 import Footer from "@/components/Footer"
-import HomePage from "@/pages/customer/HomePage"
-import OutfitPage from "@/pages/customer/OutfitPage"
 import { useAppDispatch } from "@/lib/hooks"
 import { setCategory as setCategoryAction } from "@/lib/store"
 import type { CartBundle, ShopTab, ShopView } from "@/pages/customer/types"
+
+const HomePage = lazy(() => import("@/pages/customer/HomePage"))
+const OutfitPage = lazy(() => import("@/pages/customer/OutfitPage"))
 
 /** Cart entries as stored; older hot-reload entries may miss newer fields. */
 type StoredCartBundle = Omit<CartBundle, "quantities" | "selectedSkus"> & {
@@ -34,6 +35,38 @@ async function toDataUrl(src: string): Promise<string> {
   })
 }
 
+const pendingOutfitKey = "forma-pending-outfit-v1"
+
+function readPendingOutfit(): { selected: Product[]; bundle: Product[] } | null {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(pendingOutfitKey) || "null")
+    if (value && Array.isArray(value.selected) && Array.isArray(value.bundle))
+      return { selected: value.selected, bundle: value.bundle }
+  } catch {
+    /* Invalid storage is ignored. */
+  }
+  return null
+}
+
+function savePendingOutfit(selected: Product[], bundle: Product[]) {
+  try {
+    sessionStorage.setItem(
+      pendingOutfitKey,
+      JSON.stringify({ selected, bundle }),
+    )
+  } catch {
+    /* Selection is lost across the login detour if storage is blocked. */
+  }
+}
+
+function clearPendingOutfit() {
+  try {
+    sessionStorage.removeItem(pendingOutfitKey)
+  } catch {
+    /* Nothing to clear. */
+  }
+}
+
 export default function CustomerShop({
   products,
   image,
@@ -42,6 +75,7 @@ export default function CustomerShop({
   onLogout,
   notify,
   onAssistantActions,
+  onRequireLogin,
 }: {
   products: Product[]
   image: string
@@ -50,6 +84,7 @@ export default function CustomerShop({
   onLogout: () => void
   notify: (message: string) => void
   onAssistantActions?: (actions: AssistantActions | null) => void
+  onRequireLogin?: () => void
 }) {
   const dispatch = useAppDispatch()
   const [tab, setTab] = useState<ShopTab>("home")
@@ -110,14 +145,23 @@ export default function CustomerShop({
   useEffect(() => {
     dispatch(setCategoryAction(category))
   }, [category, dispatch])
-  const [selected, setSelected] = useState<Product[]>([])
+  const pendingOutfit = useRef<
+    { selected: Product[]; bundle: Product[] } | null | undefined
+  >(undefined)
+  if (pendingOutfit.current === undefined)
+    pendingOutfit.current = readPendingOutfit()
+  const [selected, setSelected] = useState<Product[]>(
+    () => pendingOutfit.current?.selected ?? [],
+  )
   const [prefs] = useState<Preferences>({
     style: "Minimal",
     occasion: "Everyday",
     palette: "Any color",
     accessories: false,
   })
-  const [bundle, setBundle] = useState<Product[]>([])
+  const [bundle, setBundle] = useState<Product[]>(
+    () => pendingOutfit.current?.bundle ?? [],
+  )
   const [error, setError] = useState("")
   const [photos, setPhotos] = useState<string[]>([])
   const [activePhoto, setActivePhoto] = useState<number | null>(null)
@@ -344,6 +388,15 @@ export default function CustomerShop({
     })
     return () => onAssistantActions(null)
   }, [onAssistantActions])
+  useEffect(() => {
+    if (pendingOutfit.current) clearPendingOutfit()
+    // The pending selection is consumed once, on the mount after login.
+  }, [])
+  const requestLoginForFitting = () => {
+    savePendingOutfit(selected, bundle)
+    if (onRequireLogin) onRequireLogin()
+    else onLogin()
+  }
   const buildTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => clearTimeout(buildTimer.current), [])
   // Auto-recommend while working in the builder: picking pieces or tuning the
@@ -440,14 +493,17 @@ export default function CustomerShop({
       />
       <main className="customer-main">
         {tab === "home" && (
-          <HomePage
-            image={image}
-            category={category}
-            setCategory={setCategory}
-            onStartBuilder={() => { go("collection") }}
-          />
+          <Suspense fallback={<div className="import-placeholder" role="status">Loading…</div>}>
+            <HomePage
+              image={image}
+              category={category}
+              setCategory={setCategory}
+              onStartBuilder={() => { go("collection") }}
+            />
+          </Suspense>
         )}
         {tab === "outfits" && (
+          <Suspense fallback={<div className="import-placeholder" role="status">Loading…</div>}>
           <OutfitPage
             products={products}
             image={image}
@@ -494,7 +550,10 @@ export default function CustomerShop({
             photoConfigured={visionConfigured}
             hasModelPhoto={Boolean(activeModelSrc)}
             runPhotoRecommendation={runPhotoRecommendation}
+            signedIn={Boolean(session)}
+            onRequireLogin={requestLoginForFitting}
           />
+          </Suspense>
         )}
         <Footer note="Recommendations use catalogue rules and available stock. Photos stay in this browser; AI fitting and retailer checkout are not connected. Inventory freshness depends on the merchant connection." />
       </main>

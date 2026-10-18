@@ -88,6 +88,8 @@ export type OutfitPageProps = {
   photoConfigured: boolean
   hasModelPhoto: boolean
   runPhotoRecommendation: () => void
+  signedIn: boolean
+  onRequireLogin: () => void
 }
 
 export default function OutfitPage(props: OutfitPageProps) {
@@ -137,7 +139,16 @@ export default function OutfitPage(props: OutfitPageProps) {
     photoConfigured,
     hasModelPhoto,
     runPhotoRecommendation,
+    signedIn,
+    onRequireLogin,
   } = props
+  const openFitting = () => {
+    if (!signedIn) {
+      onRequireLogin()
+      return
+    }
+    go("fitting")
+  }
   const collectionPages = Math.max(1, Math.ceil(filtered.length / 12))
   const outfitRows = (
     <div className="outfit-items">
@@ -185,6 +196,8 @@ export default function OutfitPage(props: OutfitPageProps) {
           <div className="builder-model">
             <div className="fitting-canvas">
               <img
+                loading="lazy"
+                decoding="async"
                 className={activeModelSrc ? undefined : "full-body-model"}
                 src={activeModelSrc || image}
                 alt={
@@ -254,13 +267,13 @@ export default function OutfitPage(props: OutfitPageProps) {
                   onClick={() => setActivePhoto(null)}
                   aria-pressed={activePhoto === null}
                 >
-                  <img src={image} alt="Default studio model" />
+                  <img loading="lazy" decoding="async" src={image} alt="Default studio model" />
                   <span>Studio</span>
                 </button>
                 {photos.map((src, i) => (
                   <div key={src} className={`model-thumb ${activePhoto === i ? "selected" : ""}`}>
                     <button onClick={() => setActivePhoto(i)} aria-pressed={activePhoto === i} aria-label={`Fit on uploaded model ${i + 1}`}>
-                      <img src={src} alt={`Uploaded model ${i + 1}`} />
+                      <img loading="lazy" decoding="async" src={src} alt={`Uploaded model ${i + 1}`} />
                     </button>
                     <span>Model {i + 1}</span>
                     <Button className="icon-button model-remove" aria-label={`Remove model ${i + 1}`} onClick={() => removePhoto(i)}>
@@ -436,6 +449,14 @@ export default function OutfitPage(props: OutfitPageProps) {
                 </Button>
                 <Button
                   className="button secondary"
+                  disabled={!bundle.length}
+                  onClick={openFitting}
+                >
+                  Try on
+                  <Icon name="arrow" />
+                </Button>
+                <Button
+                  className="button secondary"
                   disabled={!selected.length}
                   onClick={() => {
                     setSelected([])
@@ -495,7 +516,7 @@ export default function OutfitPage(props: OutfitPageProps) {
                     setBundle([detailProduct])
                     setError("")
                     setPreviewState("idle")
-                    go("fitting")
+                    openFitting()
                   }}>
                   Fit this piece <Icon name="arrow" />
                 </Button>
@@ -605,6 +626,19 @@ export default function OutfitPage(props: OutfitPageProps) {
         </section>
       )}
       {view === "fitting" && (
+        !signedIn ? (
+          <section className="panel fitting-gate" aria-label="Sign in to try on">
+            <Heading level={2}>Sign in to try on</Heading>
+            <p className="shop-demo-note">
+              Browse and chat with the stylist freely. Sign in to fit the look on a
+              model.
+            </p>
+            <Button className="button primary" onClick={onRequireLogin}>
+              Sign in
+              <Icon name="arrow" />
+            </Button>
+          </section>
+        ) : (
         <>
           <div className="outfit-context">
             <div className="outfit-context-pieces">
@@ -622,6 +656,8 @@ export default function OutfitPage(props: OutfitPageProps) {
             <div className="fitting-model">
               <div className="fitting-canvas">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   className={activeModelSrc ? undefined : "full-body-model"}
                   src={activeModelSrc || image}
                   alt={
@@ -689,13 +725,13 @@ export default function OutfitPage(props: OutfitPageProps) {
                   onClick={() => setActivePhoto(null)}
                   aria-pressed={activePhoto === null}
                 >
-                  <img src={image} alt="Default studio model" />
+                  <img loading="lazy" decoding="async" src={image} alt="Default studio model" />
                   <span>Studio</span>
                 </button>
                 {photos.map((src, i) => (
                   <button key={src} className={`model-thumb ${activePhoto === i ? "selected" : ""}`}
                     onClick={() => setActivePhoto(i)} aria-pressed={activePhoto === i}>
-                    <img src={src} alt={`Uploaded model ${i + 1}`} />
+                    <img loading="lazy" decoding="async" src={src} alt={`Uploaded model ${i + 1}`} />
                     <span>Model {i + 1}</span>
                   </button>
                 ))}
@@ -717,6 +753,7 @@ export default function OutfitPage(props: OutfitPageProps) {
             </div>
           </div>
         </>
+        )
       )}
     </>
   )
