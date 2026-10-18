@@ -3,6 +3,7 @@ import type { Product } from "./catalogue"
 export const classificationCategories = [
   "Top",
   "Bottom",
+  "Dress",
   "Outerwear",
   "Footwear",
   "Accessory",
@@ -47,37 +48,349 @@ export function isClassificationCategory(
   )
 }
 
+export function cleanCategoryLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/** Every spelling, synonym and merchandising term that maps to a category. */
+export const categoryAliases: Record<string, ClassificationCategory> = {
+  // Tops: shirts, knitwear, bodysuits and casual layers.
+  top: "Top",
+  tops: "Top",
+  shirt: "Top",
+  shirts: "Top",
+  tshirt: "Top",
+  tshirts: "Top",
+  tee: "Top",
+  tees: "Top",
+  blouse: "Top",
+  blouses: "Top",
+  tank: "Top",
+  tanktop: "Top",
+  "tank top": "Top",
+  cami: "Top",
+  camisole: "Top",
+  "crop top": "Top",
+  bra: "Top",
+  bras: "Top",
+  sportsbra: "Top",
+  "sports bra": "Top",
+  halter: "Top",
+  polo: "Top",
+  "polo shirt": "Top",
+  sweater: "Top",
+  sweaters: "Top",
+  sweatshirt: "Top",
+  sweatshirts: "Top",
+  hoodie: "Top",
+  hoodies: "Top",
+  pullover: "Top",
+  jumper: "Top",
+  vest: "Top",
+  tunic: "Top",
+  bodysuit: "Top",
+  corset: "Top",
+  henley: "Top",
+  turtleneck: "Top",
+  "mock neck": "Top",
+  "crew neck": "Top",
+  flannel: "Top",
+  singlet: "Top",
+  undershirt: "Top",
+  "oxford shirt": "Top",
+  kurta: "Top",
+  kurti: "Top",
+  // Bottoms: trousers, denim, skirts and legwear.
+  bottom: "Bottom",
+  bottoms: "Bottom",
+  pants: "Bottom",
+  trousers: "Bottom",
+  jeans: "Bottom",
+  denim: "Bottom",
+  shorts: "Bottom",
+  skirt: "Bottom",
+  skirts: "Bottom",
+  joggers: "Bottom",
+  sweatpants: "Bottom",
+  leggings: "Bottom",
+  chinos: "Bottom",
+  chino: "Bottom",
+  cargopants: "Bottom",
+  "cargo pants": "Bottom",
+  cargo: "Bottom",
+  slacks: "Bottom",
+  palazzo: "Bottom",
+  culottes: "Bottom",
+  "skinny jeans": "Bottom",
+  "denim shorts": "Bottom",
+  "swim trunks": "Bottom",
+  boardshorts: "Bottom",
+  swimsuit: "Bottom",
+  swimwear: "Bottom",
+  bikini: "Bottom",
+  "bathing suit": "Bottom",
+  underwear: "Bottom",
+  underpants: "Bottom",
+  briefs: "Bottom",
+  boxers: "Bottom",
+  bloomers: "Bottom",
+  // One-piece garments: gowns, dresses, jumpsuits and playsuits.
+  dress: "Dress",
+  dresses: "Dress",
+  gown: "Dress",
+  gowns: "Dress",
+  "ball gown": "Dress",
+  ballgown: "Dress",
+  "evening gown": "Dress",
+  "cocktail dress": "Dress",
+  sundress: "Dress",
+  "maxi dress": "Dress",
+  "mini dress": "Dress",
+  "shift dress": "Dress",
+  "wrap dress": "Dress",
+  "sheath dress": "Dress",
+  "party dress": "Dress",
+  "formal gown": "Dress",
+  "prom gown": "Dress",
+  "wedding dress": "Dress",
+  "wedding gown": "Dress",
+  "bridal gown": "Dress",
+  "bridesmaid dress": "Dress",
+  nightgown: "Dress",
+  negligee: "Dress",
+  pinafore: "Dress",
+  jumpsuit: "Dress",
+  jumpsuits: "Dress",
+  romper: "Dress",
+  rompers: "Dress",
+  playsuit: "Dress",
+  overall: "Dress",
+  overalls: "Dress",
+  dungarees: "Dress",
+  sari: "Dress",
+  saree: "Dress",
+  kaftan: "Dress",
+  caftan: "Dress",
+  onesie: "Dress",
+  "one piece": "Dress",
+  catsuit: "Dress",
+  unitard: "Dress",
+  leotard: "Dress",
+  // Outerwear: jackets, coats, blazers and warm layers.
+  outerwear: "Outerwear",
+  jacket: "Outerwear",
+  jackets: "Outerwear",
+  coat: "Outerwear",
+  coats: "Outerwear",
+  blazer: "Outerwear",
+  blazers: "Outerwear",
+  cardigan: "Outerwear",
+  cardigans: "Outerwear",
+  parka: "Outerwear",
+  anorak: "Outerwear",
+  bomber: "Outerwear",
+  "bomber jacket": "Outerwear",
+  windbreaker: "Outerwear",
+  raincoat: "Outerwear",
+  "rain jacket": "Outerwear",
+  overcoat: "Outerwear",
+  peacoat: "Outerwear",
+  "pea coat": "Outerwear",
+  trench: "Outerwear",
+  "trench coat": "Outerwear",
+  gilet: "Outerwear",
+  puffer: "Outerwear",
+  "puffer vest": "Outerwear",
+  "down jacket": "Outerwear",
+  "leather jacket": "Outerwear",
+  kimono: "Outerwear",
+  robe: "Outerwear",
+  bathrobe: "Outerwear",
+  "bath robe": "Outerwear",
+  "dressing gown": "Outerwear",
+  shrug: "Outerwear",
+  cape: "Outerwear",
+  poncho: "Outerwear",
+  duster: "Outerwear",
+  cloak: "Outerwear",
+  "fur coat": "Outerwear",
+  "faux fur coat": "Outerwear",
+  "snow jacket": "Outerwear",
+  // Footwear: shoes, boots, heels and sandals.
+  footwear: "Footwear",
+  shoe: "Footwear",
+  shoes: "Footwear",
+  sneaker: "Footwear",
+  sneakers: "Footwear",
+  trainer: "Footwear",
+  trainers: "Footwear",
+  boot: "Footwear",
+  boots: "Footwear",
+  "ankle boots": "Footwear",
+  "combat boots": "Footwear",
+  heel: "Footwear",
+  heels: "Footwear",
+  "high heels": "Footwear",
+  stiletto: "Footwear",
+  stilettos: "Footwear",
+  sandal: "Footwear",
+  sandals: "Footwear",
+  "flip flop": "Footwear",
+  "flip flops": "Footwear",
+  flipflops: "Footwear",
+  loafer: "Footwear",
+  loafers: "Footwear",
+  "oxford shoe": "Footwear",
+  "oxford shoes": "Footwear",
+  "derby shoe": "Footwear",
+  moccasin: "Footwear",
+  moccasins: "Footwear",
+  clog: "Footwear",
+  clogs: "Footwear",
+  slipper: "Footwear",
+  slippers: "Footwear",
+  wedge: "Footwear",
+  wedges: "Footwear",
+  pump: "Footwear",
+  pumps: "Footwear",
+  espadrille: "Footwear",
+  espadrilles: "Footwear",
+  brogue: "Footwear",
+  brogues: "Footwear",
+  cleat: "Footwear",
+  "running shoe": "Footwear",
+  "basketball shoe": "Footwear",
+  "chelsea boot": "Footwear",
+  // Accessories: bags, hats, jewellery, belts and small goods.
+  accessory: "Accessory",
+  accessories: "Accessory",
+  bag: "Accessory",
+  bags: "Accessory",
+  handbag: "Accessory",
+  handbags: "Accessory",
+  purse: "Accessory",
+  purses: "Accessory",
+  tote: "Accessory",
+  "tote bag": "Accessory",
+  clutch: "Accessory",
+  backpack: "Accessory",
+  rucksack: "Accessory",
+  "sling bag": "Accessory",
+  crossbody: "Accessory",
+  "crossbody bag": "Accessory",
+  "shoulder bag": "Accessory",
+  "fanny pack": "Accessory",
+  "bum bag": "Accessory",
+  wallet: "Accessory",
+  pouch: "Accessory",
+  belt: "Accessory",
+  belts: "Accessory",
+  hat: "Accessory",
+  hats: "Accessory",
+  cap: "Accessory",
+  caps: "Accessory",
+  beanie: "Accessory",
+  beret: "Accessory",
+  headband: "Accessory",
+  "hair band": "Accessory",
+  "hair clip": "Accessory",
+  hairpin: "Accessory",
+  scrunchie: "Accessory",
+  scarf: "Accessory",
+  scarves: "Accessory",
+  shawl: "Accessory",
+  glove: "Accessory",
+  gloves: "Accessory",
+  mitten: "Accessory",
+  mittens: "Accessory",
+  sock: "Accessory",
+  socks: "Accessory",
+  stocking: "Accessory",
+  stockings: "Accessory",
+  tights: "Accessory",
+  pantyhose: "Accessory",
+  tie: "Accessory",
+  necktie: "Accessory",
+  "bow tie": "Accessory",
+  "pocket square": "Accessory",
+  cufflinks: "Accessory",
+  watch: "Accessory",
+  watches: "Accessory",
+  jewelry: "Accessory",
+  jewellery: "Accessory",
+  necklace: "Accessory",
+  necklaces: "Accessory",
+  earring: "Accessory",
+  earrings: "Accessory",
+  bracelet: "Accessory",
+  bracelets: "Accessory",
+  ring: "Accessory",
+  rings: "Accessory",
+  pendant: "Accessory",
+  brooch: "Accessory",
+  choker: "Accessory",
+  anklet: "Accessory",
+  sunglasses: "Accessory",
+  glasses: "Accessory",
+  eyewear: "Accessory",
+  spectacles: "Accessory",
+  umbrella: "Accessory",
+  "face mask": "Accessory",
+  "lapel pin": "Accessory",
+  keychain: "Accessory",
+  "key ring": "Accessory",
+}
+
+type AliasEntry = {
+  key: string
+  tokens: string[]
+  category: ClassificationCategory
+}
+
+/** Longest phrases win so "dress shirt" stays a Top while "gown" is a Dress. */
+const aliasEntries: AliasEntry[] = Object.entries(categoryAliases)
+  .map(([key, category]) => ({
+    key,
+    tokens: key.split(" "),
+    category,
+  }))
+  .sort((a, b) => b.tokens.length - a.tokens.length || b.key.length - a.key.length)
+
+/** Compound words such as "handbags" or "raincoats" are caught by these. */
+const compoundAliases: AliasEntry[] = aliasEntries.filter(
+  (entry) => entry.key.length >= 6,
+)
+
 export function normalizeCategory(
   value: unknown,
 ): ClassificationCategory | null {
   if (typeof value !== "string") return null
-  const cleaned = value.trim().toLowerCase()
-  const match = classificationCategories.find(
-    (category) => category.toLowerCase() === cleaned,
+  const cleaned = cleanCategoryLabel(value)
+  if (!cleaned) return null
+  const direct = classificationCategories.find(
+    (category) => cleanCategoryLabel(category) === cleaned,
   )
-  if (match) return match
-  const aliases: Record<string, ClassificationCategory> = {
-    tops: "Top",
-    shirt: "Top",
-    shirts: "Top",
-    bottom: "Bottom",
-    bottoms: "Bottom",
-    pants: "Bottom",
-    trousers: "Bottom",
-    jacket: "Outerwear",
-    jackets: "Outerwear",
-    coat: "Outerwear",
-    coats: "Outerwear",
-    shoes: "Footwear",
-    shoe: "Footwear",
-    sneakers: "Footwear",
-    boots: "Footwear",
-    accessories: "Accessory",
-    accessories_: "Accessory",
-    bag: "Accessory",
-    bags: "Accessory",
+  if (direct) return direct
+  const alias = categoryAliases[cleaned]
+  if (alias) return alias
+  const padded = ` ${cleaned} `
+  for (const entry of aliasEntries) {
+    if (padded.includes(` ${entry.key} `)) return entry.category
   }
-  return aliases[cleaned] ?? null
+  for (const entry of compoundAliases) {
+    if (cleaned.includes(entry.key)) return entry.category
+  }
+  const tokens = new Set(cleaned.split(" ").filter(Boolean))
+  let best: { entry: AliasEntry; score: number } | null = null
+  for (const entry of aliasEntries) {
+    const score = entry.tokens.filter((token) => tokens.has(token)).length
+    if (score > 0 && (!best || score > best.score)) best = { entry, score }
+  }
+  return best ? best.entry.category : null
 }
 
 export function readClassificationConfig(
@@ -115,6 +428,8 @@ function assertConfig(config: ClassificationConfig) {
 const systemPrompt = `You are a fashion catalogue classifier.
 Assign every product to exactly one category from this list: ${categoryList()}.
 Use the product name, color, price and any existing category hint.
+Use "Dress" for every one-piece garment: gowns, cocktail and wedding dresses, jumpsuits, rompers, playsuits, overalls, saris and nightgowns.
+Use "Top" for shirts, blouses, hoodies, sweaters and bodysuits; "Bottom" for pants, jeans, skirts and shorts; "Outerwear" for jackets, coats and blazers; "Footwear" for shoes, boots, heels and sandals; "Accessory" for everything else, including bags, wallets, belts, hats, scarves, socks, watches and jewellery.
 Respond with JSON only, in the shape {"items":[{"sku":"...","category":"...","confidence":0.0,"reason":"..."}]}.
 "sku" must echo the input sku. "category" must be one of the listed categories exactly.
 "confidence" is a number between 0 and 1. "reason" is a short phrase.`
@@ -323,10 +638,13 @@ export type ImageClassificationOutcome = {
 const IMAGE_CONCURRENCY = 2
 
 const imageSystemPrompt = `You are a fashion product identifier for a clothing catalogue.
-Look at the single garment or accessory in the photo.
+Look at the single clothing item, shoe or accessory in the photo.
 Return JSON only, in the shape {"name":"...","category":"...","color":"...","confidence":0.0,"reason":"..."}.
 "name" is a short catalogue title (2-6 words) in title case.
 "category" must be exactly one of: ${categoryList()}.
+"category" rules: gowns, cocktail and wedding dresses, jumpsuits and rompers are "Dress".
+Shirts, blouses, hoodies and sweaters are "Top"; pants, jeans, skirts and shorts are "Bottom"; jackets, coats and blazers are "Outerwear"; shoes, boots and sandals are "Footwear".
+Bags, backpacks, wallets, belts, hats, scarves, socks, watches and jewellery are "Accessory" — never invent another category.
 "color" is the dominant colour. "confidence" is 0-1. "reason" is a short phrase.`
 
 function parseImageResult(content: string): ImageClassification | null {
@@ -393,7 +711,7 @@ async function callModelForImage(
           {
             role: "user",
             content: [
-              { type: "text", text: "Identify the garment in this photo." },
+              { type: "text", text: "Identify the item in this photo." },
               { type: "image_url", image_url: { url: dataUrl } },
             ],
           },

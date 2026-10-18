@@ -42,6 +42,9 @@ export function recommendOutfit(
     categories.push("Accessory")
   if (selectedPieces.some((p) => p.category === "Outerwear"))
     categories.unshift("Outerwear")
+  // A selected one-piece garment stays in the look; core slots stay required.
+  if (selectedPieces.some((p) => p.category === "Dress"))
+    categories.push("Dress")
   const productScore = (p: Product) =>
     (prefs.occasion === "Work" && /shirt|loafer|oxford/i.test(p.name) ? 3 : 0) +
     (prefs.occasion === "Weekend" && /sneaker|canvas/i.test(p.name) ? 3 : 0) +

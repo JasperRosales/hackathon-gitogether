@@ -1,6 +1,7 @@
 import { Button, Heading } from "@/components/ui"
 import { Icon } from "@/components/Icon"
 import ExperienceLanding from "@/components/ExperienceLanding"
+import { classificationCategories } from "@/lib/classification"
 
 type Props = {
   image: string
@@ -35,7 +36,7 @@ export default function HomePage({
             <div>
               <strong>Choose a clothing category</strong>
               <div className="shop-categories home-categories" aria-label="Choose a category">
-                {["All", "Top", "Bottom", "Outerwear", "Footwear", "Accessory"].map((c) => (
+                {["All", ...classificationCategories].map((c) => (
                   <Button
                     key={c}
                     className={c === category ? "selected" : ""}
