@@ -494,12 +494,7 @@ export default function CustomerShop({
       <main className="customer-main">
         {tab === "home" && (
           <Suspense fallback={<div className="import-placeholder" role="status">Loading…</div>}>
-            <HomePage
-              image={image}
-              category={category}
-              setCategory={setCategory}
-              onStartBuilder={() => { go("collection") }}
-            />
+            <HomePage onStartBuilder={() => { go("collection") }} />
           </Suspense>
         )}
         {tab === "outfits" && (

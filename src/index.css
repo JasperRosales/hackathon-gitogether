@@ -1147,19 +1147,6 @@ td { padding-block: var(--space-3); font-size: var(--text-sm); }
   button:focus-visible, input:focus-visible, select:focus-visible { outline-color: Highlight; }
 }
 /* Customer workflow: Home | Outfits | Setting. */
-.home-entry { padding: var(--space-6) 0; border-top: 1px solid var(--border); margin-top: var(--space-6); }
-.home-entry-heading h2 { font-size: var(--text-xl); font-weight: 550; letter-spacing: -.6px; }
-.home-entry-heading p { color: var(--muted); font-size: var(--text-sm); margin-top: var(--space-2); }
-.home-entry-steps { display: grid; gap: var(--space-4); margin-top: var(--space-5); }
-.home-step { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--space-4); align-items: start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-soft); padding: var(--space-5); }
-.home-step-number { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-pill); background: var(--charcoal); color: var(--surface); font-weight: 600; font-size: var(--text-base); }
-.home-step strong { display: block; font-size: var(--text-base); font-weight: 550; margin-bottom: var(--space-3); }
-.home-categories { display: flex; flex-wrap: wrap; }
-.home-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: var(--space-4); }
-.home-path-card { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); text-align: left; background: var(--background); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-5); cursor: pointer; }
-.home-path-card:hover { border-color: var(--border-strong); background: var(--surface-subtle); }
-.home-path-card strong { font-size: var(--text-base); margin: 0; }
-.home-path-card small { color: var(--muted); font-size: var(--text-sm); line-height: 1.7; }
 /* Outfit builder studio: model left, vertical control blocks right. */
 .builder-studio { display: grid; grid-template-columns: minmax(0, .9fr) minmax(460px, 1.1fr); gap: var(--space-5); align-items: start; padding-top: var(--space-5); }
 .builder-model { position: sticky; top: calc(var(--header-height) + var(--space-6)); display: flex; flex-direction: column; gap: var(--space-3); }
@@ -1246,7 +1233,6 @@ td { padding-block: var(--space-3); font-size: var(--text-sm); }
   .settings-layout { grid-template-columns: minmax(170px, 200px) minmax(0, 1fr); gap: var(--space-4); }
 }
 @media (max-width: 650px) {
-  .home-paths { grid-template-columns: minmax(0, 1fr); }
   .builder-side .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-layout { grid-template-columns: minmax(0, 1fr); }
   .settings-nav { position: static; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); overflow-x: auto; }
