@@ -114,7 +114,9 @@ export default function App() {
     setToast("")
     setAdminPage("home")
     const target =
-      account.role === "merchant" ? "/merchant" : postLoginRoute ?? "/shop"
+      account.role === "merchant"
+        ? "/merchant"
+        : postLoginRoute?.replace(/^#/, "") ?? "/shop/outfits"
     setPostLoginRoute(null)
     navigate(target)
   }
@@ -124,7 +126,8 @@ export default function App() {
     setToast("")
     setAdminPage("home")
     setQuery("")
-    navigate("/login")
+    setPostLoginRoute(null)
+    navigate("/shop")
   }
   const needsMerchantLogin =
     route === "#/merchant" && session?.role !== "merchant"
