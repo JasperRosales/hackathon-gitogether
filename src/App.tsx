@@ -26,6 +26,22 @@ const InventoryDashboard = lazy(() => import("./pages/admin/InventoryDashboard")
 
 const image = fittingModel
 
+// Outfits-section paths require a signed-in customer. Keep in sync with the
+// hash parsing in src/components/CustomerShop.tsx (readLocation).
+const protectedShopSections = new Set([
+  "outfits",
+  "product",
+  "fitting",
+  "cart",
+  "builder",
+  "collection",
+])
+
+function isProtectedShopRoute(route: string) {
+  const [, root, section] = route.replace(/^#/, "").split("/")
+  return root === "shop" && protectedShopSections.has(section ?? "")
+}
+
 type AdminPage = "home" | "inventory"
 
 const loadingFallback = (
@@ -98,7 +114,9 @@ export default function App() {
     setToast("")
     setAdminPage("home")
     const target =
-      account.role === "merchant" ? "/merchant" : postLoginRoute ?? "/shop"
+      account.role === "merchant"
+        ? "/merchant"
+        : postLoginRoute?.replace(/^#/, "") ?? "/shop/outfits"
     setPostLoginRoute(null)
     navigate(target)
   }
@@ -108,17 +126,26 @@ export default function App() {
     setToast("")
     setAdminPage("home")
     setQuery("")
-    navigate("/login")
+    setPostLoginRoute(null)
+    navigate("/shop")
   }
   const needsMerchantLogin =
     route === "#/merchant" && session?.role !== "merchant"
+  const needsCustomerLogin = !session && isProtectedShopRoute(route)
   useEffect(() => {
     if (needsMerchantLogin) {
       window.history.replaceState(null, "", "#/login")
       setRoute("#/login")
     }
   }, [needsMerchantLogin])
-  if (route === "#/login" || needsMerchantLogin)
+  useEffect(() => {
+    if (needsCustomerLogin) {
+      setPostLoginRoute(route)
+      window.history.replaceState(null, "", "#/login")
+      setRoute("#/login")
+    }
+  }, [needsCustomerLogin, route])
+  if (route === "#/login" || needsMerchantLogin || needsCustomerLogin)
     return (
       <Suspense fallback={loadingFallback}>
         <LoginPage onLogin={login} />
