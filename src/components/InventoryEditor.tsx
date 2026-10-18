@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import type { ComponentType } from "react"
 import { Button, Form, Heading, Input, Select } from "./ui"
 import { safeImageUrl } from "../lib/catalogue"
+import { classificationCategories } from "../lib/classification"
 import type { Product } from "../lib/catalogue"
 
 type Props = {
@@ -65,7 +66,7 @@ export default function InventoryEditor({ product, products, apiConnected, Icon,
           <label>Product name<Input value={name} onChange={(event) => setName(event.target.value)} required maxLength={200} /></label>
           <label>Product code (SKU)<Input value={sku} onChange={(event) => setSku(event.target.value)} required readOnly={Boolean(product)} /></label>
           <label>Category<Select value={category} onChange={(event) => setCategory(event.target.value)}>
-            {["Top", "Bottom", "Outerwear", "Footwear", "Accessory"].map((value) => <option key={value}>{value}</option>)}
+            {classificationCategories.map((value) => <option key={value}>{value}</option>)}
           </Select></label>
           <label>Price (₱)<Input type="number" min="0" max="1000000" step=".01" value={price} onChange={(event) => setPrice(event.target.value)} required /></label>
           <label>Color<Input value={color} onChange={(event) => setColor(event.target.value)} maxLength={80} /></label>

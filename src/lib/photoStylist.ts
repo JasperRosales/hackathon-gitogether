@@ -1,4 +1,5 @@
 import type { Product } from "./catalogue"
+import { cleanCategoryLabel } from "./classification"
 import { chat, parseJsonContent } from "./aiClient"
 import type { AiChatMessage } from "./aiClient"
 import { assertVisionConfigured, readVisionConfig } from "./aiConfig"
@@ -44,6 +45,12 @@ const CATEGORY_BY_KEY: Record<string, string> = {
   footwear: "Footwear",
   outerwear: "Outerwear",
   accessory: "Accessory",
+  dress: "Dress",
+  gown: "Dress",
+  onepiece: "Dress",
+  "one piece": "Dress",
+  jumpsuit: "Dress",
+  romper: "Dress",
 }
 
 export async function recommendOutfitFromPhoto(
@@ -124,7 +131,7 @@ export async function recommendOutfitFromPhoto(
   const byCategory: Record<string, string> = {}
   const orderedSkus: string[] = []
   for (const [key, value] of Object.entries(rawOutfit)) {
-    const category = CATEGORY_BY_KEY[key.toLowerCase()]
+    const category = CATEGORY_BY_KEY[cleanCategoryLabel(key)]
     if (!category || typeof value !== "string") continue
     const sku = value.trim()
     if (!sku) continue

@@ -1,4 +1,9 @@
 import Papa from "papaparse"
+import {
+  categoryList,
+  isClassificationCategory,
+  normalizeCategory,
+} from "./classification"
 
 export type Product = {
   name: string
@@ -112,16 +117,6 @@ function validateCatalogueRows(
   if (rows.length > 5001)
     errors.push("Import at most 5,000 product-size records per file.")
   if (errors.length) return { products: [], errors, records: rows.length - 1 }
-  const categories: Record<string, string> = {
-    top: "Top",
-    tops: "Top",
-    bottom: "Bottom",
-    bottoms: "Bottom",
-    outerwear: "Outerwear",
-    footwear: "Footwear",
-    accessory: "Accessory",
-    accessories: "Accessory",
-  }
   const grouped = new Map<string, Product>()
   const variants = new Set<string>()
   for (let index = 1; index < rows.length; index++) {
@@ -132,10 +127,8 @@ function validateCatalogueRows(
       problems.push("column count does not match the header")
     const sku = get("sku"),
       name = get("name"),
-      rawCategory = get("category").toLowerCase(),
-      category = Object.prototype.hasOwnProperty.call(categories, rawCategory)
-        ? categories[rawCategory]
-        : undefined
+      rawCategory = get("category"),
+      category = normalizeCategory(rawCategory)
     const priceText = get("price"),
       stockText = get("stock"),
       size = get("size").toUpperCase(),
@@ -146,9 +139,7 @@ function validateCatalogueRows(
     if (!name || name.length > 200)
       problems.push("name must contain 1–200 characters")
     if (!category)
-      problems.push(
-        "category must be Top, Bottom, Outerwear, Footwear or Accessory",
-      )
+      problems.push(`category must be one of: ${categoryList()}`)
     if (!/^\d+(?:\.\d{1,2})?$/.test(priceText) || Number(priceText) > 1000000)
       problems.push(
         "price must be a nonnegative amount with at most two decimals",
@@ -226,9 +217,7 @@ export function readCatalogue(): Catalogue {
         (p: Product) =>
           typeof p.sku === "string" &&
           typeof p.name === "string" &&
-          ["Top", "Bottom", "Outerwear", "Footwear", "Accessory"].includes(
-            p.category,
-          ) &&
+          isClassificationCategory(p.category) &&
           Number.isFinite(p.price) &&
           p.price >= 0 &&
           Number.isInteger(p.stock) &&

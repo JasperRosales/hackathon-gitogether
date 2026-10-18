@@ -84,7 +84,7 @@ export type OutfitPageProps = {
   activeModelSrc: string | null
   removePhoto: (index: number) => void
   upload: MutableRefObject<HTMLInputElement | null>
-  photoReco: { status: "idle" | "loading" | "error"; warnings: string[]; error: string }
+  photoReco: { status: "idle" | "loading" | "error"; warnings: string[]; error: string; note: string }
   photoConfigured: boolean
   hasModelPhoto: boolean
   runPhotoRecommendation: () => void
@@ -422,6 +422,11 @@ export default function OutfitPage(props: OutfitPageProps) {
                 {!photoConfigured && (
                   <p className="shop-demo-note">
                     Photo styling is not configured. Set the AMD vision key to enable it.
+                  </p>
+                )}
+                {photoReco.note && (
+                  <p className="shop-demo-note" role="status">
+                    {photoReco.note}
                   </p>
                 )}
                 {photoReco.error && (

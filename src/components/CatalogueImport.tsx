@@ -3,6 +3,7 @@ import type { ComponentType } from "react"
 import { Button, Heading, Input, Select } from "./ui"
 import ProductImage from "./ProductImage"
 import { mergeCatalogue, parseCatalogueCsv } from "../lib/catalogue"
+import { categoryList } from "../lib/classification"
 import type { Product } from "../lib/catalogue"
 
 type Props = {
@@ -13,7 +14,7 @@ type Props = {
   onImport: (products: Product[]) => boolean
 }
 const template =
-  "sku,name,category,price,image_url,size,stock,color\nSHOP-SH-01,Cotton shirt,Top,1490.00,https://images.unsplash.com/photo-1619086303291-0ef7699e4b31,S,12,White\nSHOP-SH-01,Cotton shirt,Top,1490.00,https://images.unsplash.com/photo-1619086303291-0ef7699e4b31,M,18,White\nSHOP-TR-01,Tailored trousers,Bottom,2490.00,https://images.unsplash.com/photo-1593030761757-71fae45fa0e7,M,20,Stone\nSHOP-SN-01,Canvas sneakers,Footwear,2290.00,https://images.unsplash.com/photo-1666728514990-dd5bf3565324,M,15,White\n"
+  "sku,name,category,price,image_url,size,stock,color\nSHOP-SH-01,Cotton shirt,Top,1490.00,https://images.unsplash.com/photo-1619086303291-0ef7699e4b31,S,12,White\nSHOP-SH-01,Cotton shirt,Top,1490.00,https://images.unsplash.com/photo-1619086303291-0ef7699e4b31,M,18,White\nSHOP-TR-01,Tailored trousers,Bottom,2490.00,https://images.unsplash.com/photo-1593030761757-71fae45fa0e7,M,20,Stone\nSHOP-SN-01,Canvas sneakers,Footwear,2290.00,https://images.unsplash.com/photo-1666728514990-dd5bf3565324,M,15,White\nSHOP-GW-01,Satin evening gown,Dress,5990.00,https://images.unsplash.com/photo-1566174053879-31528523f8ae,M,8,Ivory\nSHOP-BG-01,Leather shoulder bag,Accessory,3290.00,https://images.unsplash.com/photo-1584917865442-de89df76afd3,M,10,Tan\n"
 export default function CatalogueImport({
   products,
   Icon,
@@ -136,9 +137,10 @@ export default function CatalogueImport({
           <strong>Required columns</strong>
           <code>sku, name, category, price, image_url, size, stock</code>
           <p>
-            Optional: color. Categories: Top, Bottom, Outerwear, Footwear,
-            Accessory. Repeat a SKU for each size; product fields must match.
-            Prices are in Philippine pesos (PHP).
+            Optional: color. Categories: {categoryList()}. Aliases such as Gown,
+            Jumpsuit, Handbag or Sneakers are matched to the closest category.
+            Repeat a SKU for each size; product fields must match. Prices are in
+            Philippine pesos (PHP).
           </p>
           <p>
             Images use public HTTP(S) URLs. They are fetched when displayed, not

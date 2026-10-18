@@ -205,7 +205,8 @@ export default function CustomerShop({
     status: "idle" | "loading" | "error"
     warnings: string[]
     error: string
-  }>({ status: "idle", warnings: [], error: "" })
+    note: string
+  }>({ status: "idle", warnings: [], error: "", note: "" })
   const visionConfigured = isVisionConfigured()
   const [cartState, setCart] = useState<StoredCartBundle[]>([])
   // Hot reload can retain bundles created before piece selection was added.
@@ -384,7 +385,7 @@ export default function CustomerShop({
       notify("Upload a model photo in the fitting studio first.")
       return
     }
-    setPhotoReco({ status: "loading", warnings: [], error: "" })
+    setPhotoReco({ status: "loading", warnings: [], error: "", note: "" })
     try {
       const dataUrl = await toDataUrl(activeModelSrc)
       const result = await recommendOutfitFromPhoto(products, dataUrl, {
@@ -402,11 +403,14 @@ export default function CustomerShop({
       setPreviewState("idle")
       clearTimeout(previewTimer.current)
       setPhotoReco({
-        status: result.items.length ? "idle" : "error",
+        status: "idle",
         warnings: result.warnings,
-        error: result.items.length
+        error: "",
+        note: result.items.length
           ? ""
-          : "The stylist could not build a complete look from the catalogue.",
+          : result.reasoning?.trim() ||
+            result.analysis?.trim() ||
+            "The stylist could not build a complete look from the catalogue.",
       })
     } catch (cause) {
       setPhotoReco({
@@ -414,6 +418,7 @@ export default function CustomerShop({
         warnings: [],
         error:
           cause instanceof Error ? cause.message : "AI recommendation failed.",
+        note: "",
       })
     }
   }
