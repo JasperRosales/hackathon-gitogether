@@ -1337,3 +1337,84 @@ td { padding-block: var(--space-3); font-size: var(--text-sm); }
 
 .fitting-gate { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 520px; margin: var(--space-5) auto; padding: var(--space-6); text-align: center; }
 .fitting-gate h2 { font-size: var(--text-lg); }
+/* Project landing: sticky section nav + About/Team/Links sections. */
+.landing-section-nav {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6));
+  z-index: 30;
+  display: flex;
+  gap: var(--space-1);
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto var(--space-5);
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--material-thin);
+  -webkit-backdrop-filter: var(--vibrancy-thin);
+  backdrop-filter: var(--vibrancy-thin);
+  box-shadow: var(--specular-highlight), var(--shadow-ambient);
+  overflow-x: auto;
+}
+.landing-section-nav button {
+  min-height: var(--control-small);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--motion) var(--motion-ease), color var(--motion) var(--motion-ease);
+}
+.landing-section-nav button:hover { background: var(--hover); }
+.landing-section-nav button.active { background: var(--ink); color: var(--surface); box-shadow: var(--shadow-ambient); }
+
+.landing-section { scroll-margin-top: calc(var(--header-height) + var(--space-6) + 72px); padding-top: var(--space-6); }
+.landing-section + .landing-section { border-top: 1px solid var(--border); margin-top: var(--space-6); }
+
+.landing-section-heading { max-width: 640px; margin-bottom: var(--space-5); }
+.landing-section-heading .eyebrow { margin-bottom: var(--space-2); }
+.landing-section-heading h2 { font-size: var(--text-xl); font-weight: 550; letter-spacing: -.6px; }
+
+.landing-about-grid, .landing-links-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.landing-team-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4); }
+
+.landing-info-card, .landing-placeholder-card, .landing-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-soft);
+}
+.landing-info-card h3 { font-size: var(--text-base); font-weight: 550; letter-spacing: -.3px; }
+.landing-info-card p { color: var(--muted); font-size: var(--text-sm); line-height: 1.8; }
+.landing-placeholder-card strong, .landing-link-card strong { font-size: var(--text-base); font-weight: 550; }
+.landing-placeholder-card small, .landing-link-card small { color: var(--muted); font-size: var(--text-sm); }
+
+.landing-team-card { align-items: center; text-align: center; }
+.landing-avatar { display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--radius-pill); background: var(--charcoal); color: var(--surface); font-weight: 600; letter-spacing: .5px; }
+
+.landing-link-card { color: inherit; text-decoration: none; transition: border-color var(--motion) var(--motion-ease), box-shadow var(--motion) var(--motion-ease); }
+a.landing-link-card:hover { border-color: var(--border-strong); box-shadow: var(--elevation); }
+
+.landing-link-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius-pill); background: var(--charcoal); color: var(--surface); box-shadow: var(--shadow-ambient); }
+.landing-link-icon .icon { width: 18px; height: 18px; }
+
+@media (max-width: 950px) {
+  .landing-about-grid, .landing-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .landing-team-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  /* The shop header can grow to two rows on narrow screens; re-anchor below it. */
+  .landing-section-nav { top: 124px; }
+  .landing-section { scroll-margin-top: 192px; }
+}
+@media (max-width: 650px) {
+  .landing-about-grid, .landing-links-grid { grid-template-columns: minmax(0, 1fr); }
+  .landing-team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
